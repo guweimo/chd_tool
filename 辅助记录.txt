@@ -1,0 +1,2 @@
+设置开启 boss 寻找
+	"path_line_boss_word_sw":	true,

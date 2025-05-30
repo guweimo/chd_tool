@@ -1,0 +1,5 @@
+build
+dist
+.venv
+accounts_config.json
+Config
