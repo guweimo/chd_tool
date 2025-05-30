@@ -1010,10 +1010,21 @@ class FolderSelectorApp(QMainWindow):
             with open(file_path, 'r', encoding='gb2312') as f:
                 return json.load(f)
         except UnicodeDecodeError:
-            self.encoding_backup = 'windows-1252'
+            self.encoding_backup = 'gb2312'
             try:
-                # 如果 GB2312 失败，尝试 Windows-1252
-                with open(file_path, 'r', encoding='windows-1252') as f:
+                # 如果 GB2312 失败，尝试强制读取 gb2312
+                with open(file_path, 'r', encoding='gb2312', errors='ignore') as f:
+                    content = f.read()
+
+                # 写入 tmp 文件
+                temp_filename = file_path + '.tmp'
+                with open(temp_filename, 'w', encoding='gb2312') as f:
+                    f.write(content)
+                # 替换原文件
+                os.replace(temp_filename, file_path)
+                
+                # 重新读取出来
+                with open(file_path, 'r', encoding='gb2312') as f:
                     return json.load(f)
             except Exception as e:
                 raise ValueError(f"无法解码文件 {file_path}: {str(e)}")
