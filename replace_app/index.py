@@ -1550,7 +1550,7 @@ class FolderSelectorApp(QMainWindow):
         current_equip = self.current_equipment_input.text().strip()
         replace_equip = self.replace_equipment_input.text().strip()
 
-        if not current_equip or not replace_equip:
+        if not current_equip:
             QMessageBox.warning(self, "警告", "请输入当前装备和替换装备名称!")
             return
 
