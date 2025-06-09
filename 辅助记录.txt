@@ -1,2 +1,8 @@
 设置开启 boss 寻找
 	"path_line_boss_word_sw":	true,
+
+
+44d490f43fe985aa -- 紫色大
+44cbeb42cd4b1694 -- 秋梨膏
+9d9b1392b8dbef0b -- 索拉
+a5a29df1c82c5b20 -- 勇者
