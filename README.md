@@ -2,6 +2,12 @@
 
 ### 初始化：
 
+管理员启动
+```cmd 
+
+pyinstaller --onefile --windowed --uac-admin --icon=icon.png index.py
+```
+
 ```cmd
 pyinstaller --onefile --windowed --icon=icon.png index.py
 
