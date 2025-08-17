@@ -375,10 +375,11 @@ class FolderSelectorApp(QMainWindow):
     def init_data(self):
         """初始化数据"""
         self.accounts = {}  # 存储账号数据
+        self.function4_config_name = '' # 存储账号的选项四的配置文件名
         self.current_account = None  # 当前账号
         self.folders = {}  # 存储文件夹数据：{path: name}
         self.equipment_configs = {}  # 存储装备配置数据
-        self.load_config()  # 加载保存的配置
+        self.load_config()  # 加载保存的配
     
     def init_ui(self):
         """初始化用户界面"""
@@ -841,6 +842,36 @@ class FolderSelectorApp(QMainWindow):
         self.target_option_combo.setPlaceholderText("选择目标配置")
         layout.addWidget(self.target_option_combo)
         
+        # 说明使用自定义配置文件还是Default.save
+        custom_file_info = QLabel("输入配置名称将使用 [配置名称]，不输入则使用目标角色的当前配置")
+        custom_file_info.setStyleSheet("""
+            font-family: PingFang SC; 
+            font-size: 11px; 
+            color: #888;
+            padding: 3px;
+            background: #fff3cd;
+            border-radius: 3px;
+            margin-bottom: 5px;
+        """)
+        layout.addWidget(custom_file_info)
+
+         # 配置名称输入框（新增）
+        self.config_name_input = QLineEdit()
+        self.config_name_input.setPlaceholderText("输入配置名称（可选，留空则使用当前配置）")
+        self.config_name_input.setStyleSheet("""
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+        """)
+
+        # 加载之前保存的配置名称
+        self.config_name_input.setText(self.function4_config_name)
+
+        layout.addWidget(QLabel("配置名称（可选）:（建议所有角色的配置同一个名称）"))
+        layout.addWidget(self.config_name_input)
+        
         # 选项复选框 - 使用网格布局分成两列
         options_group = QGroupBox("3. 选择要替换的选项")
         options_group.setStyleSheet("""
@@ -1053,6 +1084,7 @@ class FolderSelectorApp(QMainWindow):
                     if self.accounts:
                         self.current_account = next(iter(self.accounts.keys()))
                         self.folders = self.accounts[self.current_account].get("configurations", {})
+                        self.function4_config_name = self.accounts[self.current_account].get("function4_config_name", '')
             except Exception as e:
                 QMessageBox.warning(self, "警告", f"加载配置文件失败: {str(e)}")
     
@@ -1062,7 +1094,8 @@ class FolderSelectorApp(QMainWindow):
             # 更新当前账号的配置
             self.accounts[self.current_account] = {
                 "configurations": self.folders,
-                "count": len(self.folders)
+                "count": len(self.folders),
+                'function4_config_name': self.function4_config_name,
             }
         
         data = {
@@ -1363,6 +1396,8 @@ class FolderSelectorApp(QMainWindow):
                     self.current_account = next(iter(self.accounts.keys()))
                     self.account_combo.setCurrentText(self.current_account)
                     self.folders = self.accounts[self.current_account]["configurations"]
+                    self.function4_config_name = self.accounts[self.current_account]["function4_config_name"]
+                    self.config_name_input.setText(self.function4_config_name)
                     self.update_list_widget()
                 else:
                     self.current_account = None
@@ -1377,6 +1412,8 @@ class FolderSelectorApp(QMainWindow):
         if account_name in self.accounts:
             self.current_account = account_name
             self.folders = self.accounts[account_name].get("configurations", {})
+            self.function4_config_name = self.accounts[account_name].get("function4_config_name", '')
+            self.config_name_input.setText(self.function4_config_name)
             self.update_list_widget()
             self.log_operation(f"切换到账号: {account_name}")
     
@@ -1787,11 +1824,25 @@ class FolderSelectorApp(QMainWindow):
             QMessageBox.warning(self, "警告", "请选择源配置!")
             return
         
+        if not self.folders:
+            QMessageBox.warning(self, "警告", "请先添加配置文件夹!")
+            return
+
         # 检查是否至少选择了一个目标配置
         all_config_item = self.target_option_combo.model().item(0)
         if all_config_item.checkState() != Qt.Checked and len(self.target_option_combo.checkedItems()) == 0:
             QMessageBox.warning(self, "警告", "请至少选择一个目标配置!")
             return
+        
+        
+        # 获取配置名称
+        config_name = self.config_name_input.text().strip()
+    
+        # 确定文件名：如果有配置名称则使用 [配置名称].json，否则使用 Default.save
+        if config_name:
+            file_name = f"{config_name}.json"
+        else:
+            file_name = "Default.save"
         
         if not (self.item_use_check.isChecked() or 
                self.item_buff_check.isChecked() or 
@@ -1896,9 +1947,9 @@ class FolderSelectorApp(QMainWindow):
             # 处理每个目标配置
             updated_count = 0
             for target_path, target_name in target_configs:
-                target_file = os.path.join(target_path, "Default.save")
+                target_file = os.path.join(target_path, file_name)
                 if not os.path.exists(target_file):
-                    self.log_operation(f"跳过: {target_name} 没有Default.save文件")
+                    self.log_operation(f"跳过: {target_name} 没有 {file_name} 文件")
                     continue
                 
                 # 读取目标文件
@@ -1927,6 +1978,10 @@ class FolderSelectorApp(QMainWindow):
                 self, "完成", 
                 f"已成功更新 {updated_count}/{len(target_configs)} 个配置的选定选项"
             )
+
+            if config_name:
+                self.function4_config_name = config_name
+                self.save_config()
             
         except json.JSONDecodeError:
             self.log_operation("错误: 配置文件不是有效的JSON格式")
