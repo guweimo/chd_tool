@@ -901,32 +901,34 @@ class FolderSelectorApp(QMainWindow):
         
         # 第一列复选框
         self.item_use_check = QCheckBox("保护吃药")
-        self.item_buff_check = QCheckBox("保护-其他操作")
         self.skill_buff_check = QCheckBox("技能-辅助技能")
-        self.diy_trigger_check = QCheckBox("DIY指令")
         self.pet_build_check = QCheckBox("智能联合宠物技能")
-        
-        # 第二列复选框
-        self.item_disassemble_check = QCheckBox("物品分解")
         self.item_filter_check = QCheckBox("物品设置")
         self.filter_pick2_check = QCheckBox("额外模糊过滤")
+        self.filter_throw2_check = QCheckBox("额外模糊保留")
+        
+        # 第二列复选框
+        self.item_buff_check = QCheckBox("保护-其他操作")
+        self.diy_trigger_check = QCheckBox("DIY指令")
+        self.item_disassemble_check = QCheckBox("物品分解")
         self.filter_pick1_check = QCheckBox("额外模糊拾取")
         self.filter_throw1_check = QCheckBox("额外模糊丢弃")
-        self.filter_throw2_check = QCheckBox("额外模糊保留")
+        self.store_items_check = QCheckBox("存取材料")
 
         # 添加复选框到网格布局
         grid_layout.addWidget(self.item_use_check, 0, 0)
-        grid_layout.addWidget(self.item_buff_check, 0, 1)
         grid_layout.addWidget(self.skill_buff_check, 1, 0)
-        grid_layout.addWidget(self.diy_trigger_check, 1, 1)
         grid_layout.addWidget(self.pet_build_check, 2, 0)
-        
-        grid_layout.addWidget(self.item_disassemble_check, 2, 1)
         grid_layout.addWidget(self.item_filter_check, 3, 0)
-        grid_layout.addWidget(self.filter_pick1_check, 3, 1)
         grid_layout.addWidget(self.filter_pick2_check, 4, 0)
-        grid_layout.addWidget(self.filter_throw1_check, 4, 1)
         grid_layout.addWidget(self.filter_throw2_check, 5, 0)
+        
+        grid_layout.addWidget(self.item_buff_check, 0, 1)
+        grid_layout.addWidget(self.diy_trigger_check, 1, 1)
+        grid_layout.addWidget(self.item_disassemble_check, 2, 1)
+        grid_layout.addWidget(self.filter_pick1_check, 3, 1)
+        grid_layout.addWidget(self.filter_throw1_check, 4, 1)
+        grid_layout.addWidget(self.store_items_check, 5, 1)
         
         options_layout.addLayout(grid_layout)
         options_group.setLayout(options_layout)
@@ -956,7 +958,8 @@ class FolderSelectorApp(QMainWindow):
             self.filter_pick1_check,
             self.filter_pick2_check,
             self.filter_throw1_check,
-            self.filter_throw2_check
+            self.filter_throw2_check,
+            self.store_items_check,
         ]
         
         for checkbox in checkboxes:
@@ -1854,7 +1857,8 @@ class FolderSelectorApp(QMainWindow):
                self.diy_trigger_check.isChecked() or
                self.pet_build_check.isChecked() or
                self.item_disassemble_check.isChecked() or
-               self.item_filter_check.isChecked()):
+               self.item_filter_check.isChecked() or
+               self.store_items_check.isChecked()):
             QMessageBox.warning(self, "警告", "请至少选择一个要替换的选项!")
             return
         
@@ -1943,7 +1947,9 @@ class FolderSelectorApp(QMainWindow):
                 fields_to_copy.append(("item_filter_2", "物品设置2"))
                 fields_to_copy.append(("item_filter_3", "物品设置3"))
                 fields_to_copy.append(("item_filter_4", "物品设置4"))
-            
+            if self.item_filter_check.isChecked():
+                fields_to_copy.append(("store_items", "存取材料"))
+
             # 处理每个目标配置
             updated_count = 0
             for target_path, target_name in target_configs:
