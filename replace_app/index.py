@@ -1947,7 +1947,7 @@ class FolderSelectorApp(QMainWindow):
                 fields_to_copy.append(("item_filter_2", "物品设置2"))
                 fields_to_copy.append(("item_filter_3", "物品设置3"))
                 fields_to_copy.append(("item_filter_4", "物品设置4"))
-            if self.item_filter_check.isChecked():
+            if self.store_items_check.isChecked():
                 fields_to_copy.append(("store_items", "存取材料"))
 
             # 处理每个目标配置
