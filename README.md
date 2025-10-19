@@ -35,6 +35,10 @@ ccc
 python -m nuitka     --standalone     --onefile     --windows-disable-console     --enable-plugin=pyqt5     --include-qt-plugins=sensible,platforms     --include-data-file=down.png=down.png     --include-data-file=icon.png=icon.png     --windows-icon-from-ico=icon.ico     --output-dir=dist     --remove-output     --output-filename="多配置管理.exe"     --windows-company-name="YourCompany"     --windows-product-name="MultiConfigManager"     --windows-file-version=1.0.0     --windows-product-version=1.0.0     --windows-file-description="多配置管理工具"     index.py
 ```
 
+```cmd
+python -m nuitka     --standalone    --windows-disable-console     --enable-plugin=pyqt5     --include-qt-plugins=sensible,platforms     --include-data-file=down.png=down.png     --include-data-file=icon.png=icon.png     --windows-icon-from-ico=icon.ico     --output-dir=C:\Users\guweimo\Desktop\彩虹岛config\多配置管理     --remove-output     --output-filename="多配置管理.exe"     --windows-company-name="YourCompany"     --windows-product-name="MultiConfigManager"     --windows-file-version=1.0.0     --windows-product-version=1.0.0     --windows-file-description="多配置管理工具"   index.py
+```
+
 ```
 python -m nuitka  --onefile  --windows-disable-console	 --windows-uac-admin  --follow-imports --enable-plugin=tk-inter  --include-package=win32api,win32con,win32gui  --include-package=keyboard --include-module=PIL.ImageGrab --output-dir=dist --remove-output --output-filename="自动激活工具.exe"  index.py
 ```

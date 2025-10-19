@@ -1954,6 +1954,9 @@ class FolderSelectorApp(QMainWindow):
             updated_count = 0
             for target_path, target_name in target_configs:
                 target_file = os.path.join(target_path, file_name)
+                if config_name:
+                    default_target_file = os.path.join(target_path, "Default.save")
+
                 if not os.path.exists(target_file):
                     self.log_operation(f"跳过: {target_name} 没有 {file_name} 文件")
                     continue
@@ -1966,6 +1969,7 @@ class FolderSelectorApp(QMainWindow):
                 if self.backup_checkbox.isChecked():
                     current_file = target_file
                     self.backup_file(target_file)
+                    self.backup_file(default_target_file)
                 
                 # 替换选定字段
                 updated = False
@@ -1978,6 +1982,7 @@ class FolderSelectorApp(QMainWindow):
                 if updated:
                     # 写入更新后的文件
                     self.write_default_save(target_file, target_data)
+                    shutil.copy2(target_file, default_target_file)
                     updated_count += 1
             
             QMessageBox.information(
@@ -1996,6 +2001,7 @@ class FolderSelectorApp(QMainWindow):
             self.log_operation(f"替换失败: {str(e)}")
             QMessageBox.critical(self, "错误", f"替换配置选项失败: {str(e)}")
             shutil.copy2(current_file + '.bak', current_file)
+            shutil.copy2(default_target_file + '.bak', default_target_file)
     
     def backup_file(self, target_file, message=None):
         """备份文件"""
