@@ -88,8 +88,6 @@ if __name__ == "__main__":
         ensure_venv_activated()
         if compile_with_nuitka():
             deploy_to_target()
-            if os.name == 'nt':
-                os.startfile(r"C:\Users\guweimo\Desktop\彩虹岛config\多配置管理")
     except Exception as e:
         print(f"❌ 发生错误：{str(e)}")
         sys.exit(1)
