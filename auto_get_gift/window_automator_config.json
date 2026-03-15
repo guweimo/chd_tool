@@ -1,0 +1,19 @@
+{
+    "click_delay": 0.7,
+    "input_delay": 0.8,
+    "screenshot_enabled": false,
+    "coords": {
+        "1": [
+            2177,
+            329
+        ],
+        "2": [
+            1849,
+            1003
+        ],
+        "3": [
+            1820,
+            1000
+        ]
+    }
+}
