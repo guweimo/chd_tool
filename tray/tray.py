@@ -144,7 +144,7 @@ class RainbowIslandManager:
             rainbow_keywords = ['LataleClient_x64']
             found_processes = []
             
-            for proc in psutil.process_iter(['exe']):
+            for proc in psutil.process_iter(['pid', 'name', 'exe', 'cmdline']):
                 try:
                     proc_info = proc.info
                     name_lower = proc_info['name'].lower() if proc_info['name'] else ""
@@ -152,7 +152,6 @@ class RainbowIslandManager:
                     
                     # 检查是否包含关键词
                     for keyword in rainbow_keywords:
-                        print('name', name_lower, 'cmdline', cmdline)
                         if keyword.lower() in name_lower or keyword.lower() in cmdline.lower():
                             found_processes.append({
                                 'pid': proc_info['pid'],
@@ -220,8 +219,8 @@ class RainbowIslandManager:
         self.running_processes = {}
         
         # 查找所有相关进程
-        rainbow_keywords = ['LataleClient']
-        
+        rainbow_keywords = [ 'LataleClient_x64' ]
+
         for proc in psutil.process_iter(['pid', 'name', 'exe', 'cmdline', 'create_time']):
             try:
                 proc_info = proc.info
@@ -266,6 +265,7 @@ class RainbowIslandManager:
         self.context_menu = tk.Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="隐藏进程", command=self.hide_selected_app)
         self.context_menu.add_command(label="显示进程", command=self.show_selected_app)
+        self.context_menu.add_command(label="查看窗口信息", command=self.show_selected_window_info)
         self.context_menu.add_separator()
         self.context_menu.add_command(label="停止进程", command=self.stop_selected_app)
         self.context_menu.add_command(label="刷新状态", command=self.refresh_status)
@@ -328,7 +328,7 @@ class RainbowIslandManager:
             self.context_menu.entryconfig("停止进程", state="normal")
     
     def get_process_windows(self, pid):
-        """获取指定进程的所有窗口句柄（带缓存）"""
+        """获取指定进程的所有窗口信息（带缓存）"""
         current_time = time.time()
         
         # 检查缓存是否有效
@@ -337,7 +337,7 @@ class RainbowIslandManager:
             return self.window_cache[pid]
         
         # 重新枚举窗口
-        window_handles = []
+        window_info_list = []
         
         @ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
         def enum_windows_proc(hwnd, lParam):
@@ -346,23 +346,33 @@ class RainbowIslandManager:
             ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(lpdw_process_id))
             
             if lpdw_process_id.value == pid:
-                window_handles.append(hwnd)
+                # 获取窗口标题
+                title_length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+                title_buffer = ctypes.create_unicode_buffer(title_length + 1)
+                ctypes.windll.user32.GetWindowTextW(hwnd, title_buffer, title_length + 1)
+                
+                window_info_list.append({
+                    'handle': hwnd,
+                    'title': title_buffer.value,
+                    'process_id': pid
+                })
             return True
         
         ctypes.windll.user32.EnumWindows(enum_windows_proc, 0)
         
         # 更新缓存
-        self.window_cache[pid] = window_handles
+        self.window_cache[pid] = window_info_list
         self.last_cache_time = current_time
         
-        return window_handles
+        return window_info_list
     
     def check_window_visibility(self, pid):
         """检查指定进程的窗口是否可见（优化版本）"""
         try:
-            window_handles = self.get_process_windows(pid)
+            window_info_list = self.get_process_windows(pid)
             
-            for hwnd in window_handles:
+            for window_info in window_info_list:
+                hwnd = window_info['handle']
                 # 检查窗口是否可见
                 is_visible = ctypes.windll.user32.IsWindowVisible(hwnd)
                 if is_visible:
@@ -420,7 +430,7 @@ class RainbowIslandManager:
                 process.terminate()
                 
                 self.status_label.config(text=f"已停止进程: {pid}")
-                # self.refresh_treeview()
+                self.refresh_treeview()
                 messagebox.showinfo("成功", f"已成功停止进程: {pid}")
             else:
                 messagebox.showwarning("警告", f"进程 {pid} 不存在")
@@ -457,12 +467,17 @@ class RainbowIslandManager:
         """隐藏指定进程的所有窗口（优化版本）"""
         def hide_in_thread():
             try:
-                window_handles = self.get_process_windows(pid)
+                window_info_list = self.get_process_windows(pid)
                 hidden_count = 0
                 
-                for hwnd in window_handles:
-                    # 检查窗口是否可见
-                    if ctypes.windll.user32.IsWindowVisible(hwnd):
+                for window_info in window_info_list:
+                    hwnd = window_info['handle']
+                    title = window_info['title']
+                    print(f"检查窗口: {hwnd} - 标题: {title}")
+                    
+                    # 检查窗口是否可见且标题包含"LaTale Client"
+                    if (ctypes.windll.user32.IsWindowVisible(hwnd) and 
+                        "LaTale Client" in title):
                         # 隐藏窗口
                         ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
                         hidden_count += 1
@@ -490,15 +505,20 @@ class RainbowIslandManager:
         """显示指定进程的所有窗口（优化版本）"""
         def show_in_thread():
             try:
-                window_handles = self.get_process_windows(pid)
+                window_info_list = self.get_process_windows(pid)
                 shown_count = 0
                 
-                for hwnd in window_handles:
-                    # 显示窗口并恢复
-                    ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
-                    # 将窗口置于前台
-                    ctypes.windll.user32.SetForegroundWindow(hwnd)
-                    shown_count += 1
+                for window_info in window_info_list:
+                    hwnd = window_info['handle']
+                    title = window_info['title']
+                    
+                    # 检查窗口标题是否包含"LaTale Client"
+                    if "LaTale Client" in title:
+                        # 显示窗口并恢复
+                        ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
+                        # 将窗口置于前台
+                        ctypes.windll.user32.SetForegroundWindow(hwnd)
+                        shown_count += 1
                 
                 # 在主线程中更新界面
                 self.root.after(0, lambda: self._on_show_complete(pid, shown_count))
@@ -525,7 +545,7 @@ class RainbowIslandManager:
             if app_name in self.applications:
                 del self.applications[app_name]
                 self.save_applications()
-                # self.refresh_treeview()
+                self.refresh_treeview()
                 self.status_label.config(text=f"已删除: {app_name}")
     
     def monitor_processes(self):
@@ -538,6 +558,99 @@ class RainbowIslandManager:
         #         pass
         #     except:
         #         pass
+    
+    def get_window_details(self, pid):
+        """获取指定进程ID的所有窗口详细信息"""
+        try:
+            # 定义 WINDOWPLACEMENT 结构体
+            class WINDOWPLACEMENT(ctypes.Structure):
+                _fields_ = [
+                    ("length", ctypes.c_uint),
+                    ("flags", ctypes.c_uint),
+                    ("showCmd", ctypes.c_uint),
+                    ("ptMinPosition", ctypes.wintypes.POINT),
+                    ("ptMaxPosition", ctypes.wintypes.POINT),
+                    ("rcNormalPosition", ctypes.wintypes.RECT)
+                ]
+            
+            window_info_list = self.get_process_windows(pid)
+            window_details = []
+            
+            for window_info in window_info_list:
+                hwnd = window_info['handle']
+                
+                # 获取窗口标题
+                title_length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+                title_buffer = ctypes.create_unicode_buffer(title_length + 1)
+                ctypes.windll.user32.GetWindowTextW(hwnd, title_buffer, title_length + 1)
+                
+                # 获取窗口位置和大小
+                rect = ctypes.wintypes.RECT()
+                ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                
+                # 检查窗口可见性
+                is_visible = ctypes.windll.user32.IsWindowVisible(hwnd)
+                
+                # 检查窗口是否是最小化/最大化
+                placement = WINDOWPLACEMENT()
+                placement.length = ctypes.sizeof(WINDOWPLACEMENT)
+                ctypes.windll.user32.GetWindowPlacement(hwnd, ctypes.byref(placement))
+                
+                window_details.append({
+                    'handle': hwnd,
+                    'title': title_buffer.value,
+                    'visible': bool(is_visible),
+                    'position': (rect.left, rect.top),
+                    'size': (rect.right - rect.left, rect.bottom - rect.top),
+                    'minimized': placement.showCmd == 2,  # SW_SHOWMINIMIZED
+                    'maximized': placement.showCmd == 3,  # SW_SHOWMAXIMIZED
+                    'process_id': pid
+                })
+            
+            return window_details
+            
+        except Exception as e:
+            print(f"获取窗口详细信息时出错: {e}")
+            return []
+    
+    def show_window_info(self, pid):
+        """显示指定进程的窗口信息"""
+        details = self.get_window_details(pid)
+        if details:
+            info_text = f"进程 {pid} 的窗口信息:\n"
+            for i, window in enumerate(details, 1):
+                info_text += f"\n窗口 {i}:\n"
+                info_text += f"  句柄: {window['handle']}\n"
+                info_text += f"  标题: {window['title']}\n"
+                info_text += f"  可见: {'是' if window['visible'] else '否'}\n"
+                info_text += f"  位置: {window['position']}\n"
+                info_text += f"  大小: {window['size']}\n"
+                info_text += f"  最小化: {'是' if window['minimized'] else '否'}\n"
+                info_text += f"  最大化: {'是' if window['maximized'] else '否'}\n"
+            
+            # 创建信息显示窗口
+            info_window = tk.Toplevel(self.root)
+            info_window.title(f"进程 {pid} 窗口信息")
+            info_window.geometry("600x400")
+            
+            text_widget = tk.Text(info_window, wrap=tk.WORD)
+            text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            text_widget.insert(tk.END, info_text)
+            text_widget.config(state=tk.DISABLED)
+            
+            # 添加复制按钮
+            copy_btn = ttk.Button(info_window, text="复制信息", 
+                                 command=lambda: self.root.clipboard_clear() or 
+                                               self.root.clipboard_append(info_text))
+            copy_btn.pack(pady=5)
+            
+        else:
+            messagebox.showinfo("信息", f"进程 {pid} 没有找到任何窗口")
+    
+    def show_selected_window_info(self):
+        """显示选中进程的窗口信息"""
+        if hasattr(self, 'selected_pid') and self.selected_pid:
+            self.show_window_info(self.selected_pid)
 
 def main():
     root = tk.Tk()
