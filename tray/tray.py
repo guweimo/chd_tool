@@ -19,6 +19,9 @@ SW_HIDE = 0
 SW_SHOW = 5
 SW_RESTORE = 9
 
+# Windows API类型定义
+LRESULT = ctypes.c_long
+
 class RainbowIslandManager:
     def __init__(self, root):
         self.root = root
@@ -47,6 +50,7 @@ class RainbowIslandManager:
         # 启动后台监控线程
         self.monitor_thread = threading.Thread(target=self.monitor_processes, daemon=True)
         self.monitor_thread.start()
+        self.hidden_windows = {} 
     
     def create_widgets(self):
         # 主框架
@@ -467,6 +471,91 @@ class RainbowIslandManager:
         except Exception as e:
             messagebox.showerror("错误", f"显示进程失败: {e}")
 
+    def enhanced_hide_window(self, hwnd):
+        """增强的窗口隐藏方法，防止UAC弹窗导致的自动显示"""
+        try:
+            # Windows API常量定义
+            GWL_EXSTYLE = -20
+            WS_EX_TOOLWINDOW = 0x00000080
+            WS_EX_NOACTIVATE = 0x08000000
+            
+            # 1. 首先使用标准方法隐藏窗口
+            ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
+            
+            # 2. 设置窗口扩展样式，防止UAC弹窗导致的自动显示
+            current_exstyle = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            
+            # 添加工具窗口样式，使窗口不在任务栏显示
+            new_exstyle = current_exstyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_exstyle)
+            
+            # 3. 禁用窗口，防止接收焦点
+            ctypes.windll.user32.EnableWindow(hwnd, False)
+            
+            # 4. 设置窗口为最底层，防止被其他窗口激活
+            HWND_BOTTOM = 1
+            SWP_NOACTIVATE = 0x0010
+            SWP_NOMOVE = 0x0002
+            SWP_NOSIZE = 0x0001
+            ctypes.windll.user32.SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, 
+                                             SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE)
+            
+            # 5. 验证窗口是否真正隐藏
+            is_visible = ctypes.windll.user32.IsWindowVisible(hwnd)
+            
+            return not is_visible
+            
+        except Exception as e:
+            print(f"增强隐藏窗口失败: {e}")
+            # 回退到标准隐藏方法
+            try:
+                ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
+                return True
+            except:
+                return False
+
+    def enhanced_show_window(self, hwnd):
+        """增强的窗口显示方法，恢复窗口的正常状态"""
+        try:
+            # Windows API常量定义
+            GWL_EXSTYLE = -20
+            WS_EX_TOOLWINDOW = 0x00000080
+            WS_EX_NOACTIVATE = 0x08000000
+            
+            # 1. 恢复窗口扩展样式
+            current_exstyle = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            new_exstyle = current_exstyle & ~(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE)
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_exstyle)
+            
+            # 2. 启用窗口
+            ctypes.windll.user32.EnableWindow(hwnd, True)
+            
+            # 3. 显示窗口并恢复
+            # ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
+            
+            # 4. 将窗口置于前台
+            # ctypes.windll.user32.SetForegroundWindow(hwnd)
+            
+            return True
+            
+        except Exception as e:
+            print(f"增强显示窗口失败: {e}")
+            # 回退到标准显示方法
+            try:
+                ctypes.windll.user32.ShowWindow(hwnd, SW_SHOW)
+                return True
+            except:
+                return False
+            
+        except Exception as e:
+            print(f"增强显示窗口失败: {e}")
+            # 回退到标准显示方法
+            try:
+                ctypes.windll.user32.ShowWindow(hwnd, SW_SHOW)
+                return True
+            except:
+                return False
+
     def mute_process_audio(self, pid):
         """静音指定进程的音频"""
         try:
@@ -520,6 +609,7 @@ class RainbowIslandManager:
                         "LaTale Client" in title):
                         # 隐藏窗口
                         self.mute_process_audio(pid)
+                        self.enhanced_hide_window(hwnd)
                         ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_MINIMIZE)
                         win32gui.SetWindowPos(
                             hwnd, 
@@ -566,6 +656,7 @@ class RainbowIslandManager:
                     # 检查窗口标题是否包含"LaTale Client"
                     if "LaTale Client" in title:
                         self.unmute_process_audio(pid)
+                        self.enhanced_show_window(hwnd)
                         ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_SHOWNORMAL)
                         win32gui.SetWindowPos(
                             hwnd, 
