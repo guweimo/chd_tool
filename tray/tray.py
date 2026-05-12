@@ -9,6 +9,10 @@ import time
 from datetime import datetime
 import ctypes
 from ctypes import wintypes
+import win32gui
+import win32con
+import win32api
+import win32process
 
 # Windows API常量定义
 SW_HIDE = 0
@@ -462,7 +466,43 @@ class RainbowIslandManager:
                 messagebox.showerror("错误", f"显示进程失败: {pid}")
         except Exception as e:
             messagebox.showerror("错误", f"显示进程失败: {e}")
+
+    def mute_process_audio(self, pid):
+        """静音指定进程的音频"""
+        try:
+            import comtypes
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, ISimpleAudioVolume
+            
+            sessions = AudioUtilities.GetAllSessions()
+            for session in sessions:
+                if session.Process and session.Process.pid == pid:
+                    volume = session._ctl.QueryInterface(ISimpleAudioVolume)
+                    # 静音
+                    volume.SetMute(1, None)
+                    return True
+            return False
+        except Exception as e:
+            print(f"静音音频失败: {e}")
+            return False
     
+    def unmute_process_audio(self, pid):
+        """取消静音指定进程的音频"""
+        try:
+            import comtypes
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, ISimpleAudioVolume
+            
+            sessions = AudioUtilities.GetAllSessions()
+            for session in sessions:
+                if session.Process and session.Process.pid == pid:
+                    volume = session._ctl.QueryInterface(ISimpleAudioVolume)
+                    # 取消静音
+                    volume.SetMute(0, None)
+                    return True
+            return False
+        except Exception as e:
+            print(f"取消静音失败: {e}")
+            return False
+
     def hide_process_windows(self, pid):
         """隐藏指定进程的所有窗口（优化版本）"""
         def hide_in_thread():
@@ -479,6 +519,17 @@ class RainbowIslandManager:
                     if (ctypes.windll.user32.IsWindowVisible(hwnd) and 
                         "LaTale Client" in title):
                         # 隐藏窗口
+                        self.mute_process_audio(pid)
+                        ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+                        win32gui.SetWindowPos(
+                            hwnd, 
+                            0,  # HWND_BOTTOM
+                            -1000,  # 右边缘
+                            -1000,  # 下边缘
+                            10,  # 最小宽度
+                            10,  # 最小高度
+                            win32con.SWP_SHOWWINDOW
+                        )
                         ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
                         hidden_count += 1
                 
@@ -514,6 +565,17 @@ class RainbowIslandManager:
                     
                     # 检查窗口标题是否包含"LaTale Client"
                     if "LaTale Client" in title:
+                        self.unmute_process_audio(pid)
+                        ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_SHOWNORMAL)
+                        win32gui.SetWindowPos(
+                            hwnd, 
+                            win32con.HWND_BOTTOM,  # HWND_BOTTOM
+                            129,  # 右边缘
+                            57,  # 下边缘
+                            1936,  # 最小宽度
+                            1119,  # 最小高度
+                            win32con.SWP_SHOWWINDOW
+                        )
                         # 显示窗口并恢复
                         ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
                         # 将窗口置于前台
