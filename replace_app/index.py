@@ -650,6 +650,8 @@ class FolderSelectorApp(QMainWindow):
         self.function_combo.addItem("2. 替换其他配置的指定装备配置")
         self.function_combo.addItem("3. 复制默认设置到所选配置中")
         self.function_combo.addItem("4. 替换指定配置选项")
+        self.function_combo.addItem("5. 更改难度")
+        self.function_combo.addItem("6. 同步Lua文件")
         self.function_combo.currentIndexChanged.connect(self.on_function_changed)
         self.function_layout.addWidget(self.function_combo)
         
@@ -668,6 +670,14 @@ class FolderSelectorApp(QMainWindow):
         # 功能4的输入控件容器
         self.function4_container = self.create_function4_widget()
         self.function_layout.addWidget(self.function4_container)
+        
+        # 功能5的输入控件容器
+        self.function5_container = self.create_function5_widget()
+        self.function_layout.addWidget(self.function5_container)
+        
+        # 功能6的输入控件容器
+        self.function6_container = self.create_function6_widget()
+        self.function_layout.addWidget(self.function6_container)
         
         # 添加执行按钮
         self.execute_button = QPushButton("执行选定功能")
@@ -938,6 +948,155 @@ class FolderSelectorApp(QMainWindow):
         container.hide()
         return container
     
+    def create_function5_widget(self):
+        """创建功能5的控件 - 更改难度"""
+        container = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(10)
+        
+        # 目标配置选择
+        layout.addWidget(QLabel("1. 目标配置:"))
+        self.target_difficulty_combo = QComboBox()
+        self.target_difficulty_combo.setItemDelegate(StyledComboBoxDelegate(self.target_difficulty_combo))
+        self.target_difficulty_combo.setPlaceholderText("选择目标配置")
+        self.target_difficulty_combo.setStyleSheet(self.select_style)
+        self.target_difficulty_combo.currentIndexChanged.connect(self.refresh_lua_files)
+        layout.addWidget(self.target_difficulty_combo)
+        
+        # 刷新按钮
+        self.refresh_lua_btn = QPushButton("刷新Lua文件列表")
+        self.refresh_lua_btn.setStyleSheet("""
+            QPushButton {
+                padding: 8px 10px;
+                font-family: PingFang SC;
+                font-size: 14px;
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background: #5a6268;
+            }
+        """)
+        self.refresh_lua_btn.clicked.connect(self.refresh_lua_files)
+        layout.addWidget(self.refresh_lua_btn)
+        
+        # Lua文件列表
+        layout.addWidget(QLabel("2. Lua文件列表:"))
+        self.lua_list_widget = QListWidget()
+        self.lua_list_widget.setAlternatingRowColors(True)
+        self.lua_list_widget.setStyleSheet("""
+            QListWidget {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                background: white;
+                font-family: PingFang SC;
+                font-size: 14px;
+            }
+            QListWidget::item {
+                border-bottom: 1px solid #eee;
+                height: 30px;
+            }
+            QListWidget::item:hover {
+                background: #f5f5f5;
+            }
+            QListWidget::item:selected {
+                background: #007acc;
+                color: white;
+            }
+        """)
+        layout.addWidget(self.lua_list_widget)
+        
+        # 难度选择
+        layout.addWidget(QLabel("3. 难度选择:"))
+        self.difficulty_combo = QComboBox()
+        self.difficulty_combo.setItemDelegate(StyledComboBoxDelegate(self.difficulty_combo))
+        self.difficulty_combo.setStyleSheet(self.select_style)
+        self.difficulty_combo.addItems(["剧情", "简单", "普通", "困难", "炼狱"])
+        layout.addWidget(self.difficulty_combo)
+        
+        # 探索设置
+        layout.addWidget(QLabel("4. 探索设置:"))
+        self.explore_combo = QComboBox()
+        self.explore_combo.setItemDelegate(StyledComboBoxDelegate(self.explore_combo))
+        self.explore_combo.setStyleSheet(self.select_style)
+        self.explore_combo.addItems(["关闭", "开启"])
+        layout.addWidget(self.explore_combo)
+        
+        container.setLayout(layout)
+        container.hide()
+        return container
+    
+    def create_function6_widget(self):
+        """创建功能6的控件 - 同步Lua文件"""
+        container = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(10)
+        
+        # 源配置选择
+        layout.addWidget(QLabel("1. 源配置:"))
+        self.source_sync_combo = QComboBox()
+        self.source_sync_combo.setItemDelegate(StyledComboBoxDelegate(self.source_sync_combo))
+        self.source_sync_combo.setPlaceholderText("选择源配置")
+        self.source_sync_combo.setStyleSheet(self.select_style)
+        self.source_sync_combo.currentIndexChanged.connect(self.on_source_sync_changed)
+        layout.addWidget(self.source_sync_combo)
+        
+        # 目标配置选择（多选）
+        layout.addWidget(QLabel("2. 目标配置:"))
+        self.target_sync_combo = CheckableComboBox()
+        layout.addWidget(self.target_sync_combo)
+        
+        self.refresh_sync_lua_btn = QPushButton("刷新Lua文件列表")
+        self.refresh_sync_lua_btn.setStyleSheet("""
+            QPushButton {
+                padding: 8px 10px;
+                font-family: PingFang SC;
+                font-size: 14px;
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background: #5a6268;
+            }
+        """)
+        self.refresh_sync_lua_btn.clicked.connect(self.refresh_sync_lua_files)
+        layout.addWidget(self.refresh_sync_lua_btn)
+        
+        # Lua文件列表（多选）
+        layout.addWidget(QLabel("3. Lua文件列表（可多选）:"))
+        self.sync_lua_list_widget = QListWidget()
+        self.sync_lua_list_widget.setSelectionMode(QListWidget.MultiSelection)
+        self.sync_lua_list_widget.setAlternatingRowColors(True)
+        self.sync_lua_list_widget.setStyleSheet("""
+            QListWidget {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                background: white;
+                font-family: PingFang SC;
+                font-size: 14px;
+            }
+            QListWidget::item {
+                border-bottom: 1px solid #eee;
+                height: 30px;
+            }
+            QListWidget::item:hover {
+                background: #f5f5f5;
+            }
+            QListWidget::item:selected {
+                background: #007bff;
+                color: white;
+            }
+        """)
+        layout.addWidget(self.sync_lua_list_widget)
+        
+        container.setLayout(layout)
+        container.hide()
+        return container
+    
     def encode_data(self, value, encoding):
         s1 = json.dumps(value)
         s2_bytes = s1.encode('latin1')
@@ -1106,8 +1265,13 @@ class FolderSelectorApp(QMainWindow):
         }
         
         try:
-            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
+            # 使用json.dumps手动序列化，然后替换换行符为LF
+            json_str = json.dumps(data, indent=4, ensure_ascii=False)
+            # 将CRLF换行符替换为LF
+            json_str = json_str.replace('\r\n', '\n')
+            
+            with open(CONFIG_FILE, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(json_str)
         except Exception as e:
             QMessageBox.critical(self, "错误", f"保存配置文件失败: {str(e)}")
     
@@ -1118,6 +1282,8 @@ class FolderSelectorApp(QMainWindow):
         self.function2_container.hide()
         self.function3_container.hide()
         self.function4_container.hide()
+        self.function5_container.hide()
+        self.function6_container.hide()
         self.execute_button.show()
         self.backup_checkbox.show()
         
@@ -1134,6 +1300,12 @@ class FolderSelectorApp(QMainWindow):
         elif index == 4:  # 替换指定配置选项
             self.function4_container.show()
             self.update_option_config_combos()
+        elif index == 5:  # 更改难度
+            self.function5_container.show()
+            self.update_difficulty_config_combos()
+        elif index == 6:  # 同步Lua文件
+            self.function6_container.show()
+            self.update_sync_config_combos()
         else:
             self.backup_checkbox.hide()
             self.execute_button.hide()
@@ -1210,6 +1382,30 @@ class FolderSelectorApp(QMainWindow):
             if not has_selection:
                 all_config_item.setEnabled(True)
                 all_config_item.setCheckState(Qt.Checked)
+
+    def update_difficulty_config_combos(self):
+        """更新功能5的下拉菜单"""
+        self.target_difficulty_combo.clear()
+        
+        for path, name in self.folders.items():
+            self.target_difficulty_combo.addItem(name, path)
+        
+        # 默认选中第一个配置并自动刷新Lua文件
+        if self.target_difficulty_combo.count() > 0:
+            self.target_difficulty_combo.setCurrentIndex(0)
+            self.refresh_lua_files()
+    
+    def update_sync_config_combos(self):
+        """更新功能6的下拉菜单"""
+        self.source_sync_combo.clear()
+        self.target_sync_combo.clear()
+        
+        for path, name in self.folders.items():
+            self.source_sync_combo.addItem(name, path)
+            self.target_sync_combo.addItem(name, path)
+        # 默认选中第一个配置
+        if self.source_sync_combo.count() > 0:
+            self.source_sync_combo.setCurrentIndex(0)
 
     def update_default_config_combos(self):
         """更新功能3的下拉菜单"""
@@ -1410,6 +1606,263 @@ class FolderSelectorApp(QMainWindow):
             # 保存配置
             self.save_config()
     
+    def refresh_lua_files(self):
+        """刷新Lua文件列表"""
+        self.lua_list_widget.clear()
+        
+        selected_path = self.target_difficulty_combo.currentData()
+        if not selected_path:
+            return
+            
+        try:
+            # 获取目标配置路径下的所有.lua文件
+            lua_files = []
+            for file in os.listdir(selected_path):
+                if file.endswith('.lua'):
+                    lua_files.append(file)
+            
+            if not lua_files:
+                self.lua_list_widget.addItem("未找到.lua文件")
+                return
+            
+            # 文件名映射关系
+            filename_mapping = {
+                "a11f6f8b73d79273": "普累罗麻",
+                "96d0f424b3d6a42f": "残缺边界",
+                "3e5c4e25fb39dec6": "葬剑幻谷",
+                "e3963af32f789373": "翡翠世界",
+                "181b75c7f9bc9de7": "被吞噬的魔法办公楼",
+                "854df731d996c054": "归元木匣",
+                "3cc4cdda6cfb6e65": "铁之考验",
+                "232d6af26e1536aa": "赫利波尔要塞",
+                "6e4ca0cb0c935200": "曼赤肯仓库",
+                "d29ecf143abd4460": "丽西泰亚之门",
+                "8730659a18d7b4ba": "蘑菇树沼泽",
+                "5d2f295ec271acdb": "摩克沙",
+                "74b04b62710052ab": "尼夫海姆站",
+                "54cbda403ac1e8ef": "阿特拉斯庭院",
+                "14bcb0915711d136": "埃吉尔遗迹",
+                "a2f9929ab4d64355": "大地的考验",
+                "3b386ccf95b83396": "黑月的考验",
+                "60ecc260c1312931": "诺尼尔之泪",
+                "3884d4a499b541a9": "神笔画卷",
+                "432f304bd27ba112": "消失的星之歌",
+                "b132c14db09d8a05": "黄昏教堂",
+                "f83325f755aac222": "精灵树桩",
+                "edb0c2993de08c4e": "生命之恩泰",
+                "b7d4b92119164d14": "失魂寺",
+                "f5b6e903f08655fc": "薇娅斯梦境",
+                "6f58063a8bbccba5": "穆斯菲尔斯隧道",
+                "aa7fa86c91735c2c": "星能之战（家族本）"
+            }
+            
+            # 将有映射关系的文件排在前面，没有映射关系的文件排在后面
+            mapped_files = []
+            unmapped_files = []
+            
+            for lua_file in lua_files:
+                file_name_without_ext = lua_file.replace('.lua', '')
+                if file_name_without_ext in filename_mapping:
+                    mapped_files.append(lua_file)
+                else:
+                    unmapped_files.append(lua_file)
+            
+            # 分别排序
+            mapped_files.sort()
+            unmapped_files.sort()
+            
+            # 合并列表：有映射的文件在前，无映射的文件在后
+            lua_files = mapped_files + unmapped_files
+            
+            for lua_file in lua_files:
+                # 获取文件名（不含.lua后缀）
+                file_name_without_ext = lua_file.replace('.lua', '')
+                
+                # 使用映射关系解码文件名
+                decoded_name = filename_mapping.get(file_name_without_ext, file_name_without_ext)
+                
+                if decoded_name != file_name_without_ext:
+                    display_name = f"{decoded_name} ({lua_file})"
+                else:
+                    display_name = lua_file
+                
+                item = QListWidgetItem(display_name)
+                item.setData(Qt.UserRole, lua_file)  # 存储原始文件名
+                self.lua_list_widget.addItem(item)
+                
+            # 设置Lua文件选择信号连接
+            self.lua_list_widget.currentItemChanged.connect(self.read_lua_difficulty)
+            
+            self.log_operation(f"已加载 {len(lua_files)} 个Lua文件")
+            
+        except Exception as e:
+            self.log_operation(f"刷新Lua文件列表出错: {str(e)}")
+            QMessageBox.warning(self, "警告", f"读取Lua文件列表失败: {str(e)}")
+    
+    def refresh_sync_lua_files(self):
+        """刷新功能6的Lua文件列表"""
+        self.sync_lua_list_widget.clear()
+        
+        source_path = self.source_sync_combo.currentData()
+        if not source_path:
+            QMessageBox.warning(self, "警告", "请先选择源配置!")
+            return
+            
+        try:
+            # 获取源配置路径下的所有.lua文件
+            lua_files = []
+            for file in os.listdir(source_path):
+                if file.endswith('.lua'):
+                    lua_files.append(file)
+            
+            if not lua_files:
+                self.sync_lua_list_widget.addItem("未找到.lua文件")
+                return
+            
+            # 文件名映射关系
+            filename_mapping = {
+                "a11f6f8b73d79273": "普累罗麻",
+                "96d0f424b3d6a42f": "残缺边界",
+                "3e5c4e25fb39dec6": "葬剑幻谷",
+                "e3963af32f789373": "翡翠世界",
+                "181b75c7f9bc9de7": "被吞噬的魔法办公楼",
+                "854df731d996c054": "归元木匣",
+                "3cc4cdda6cfb6e65": "铁之考验",
+                "232d6af26e1536aa": "赫利波尔要塞",
+                "6e4ca0cb0c935200": "曼赤肯仓库",
+                "d29ecf143abd4460": "丽西泰亚之门",
+                "8730659a18d7b4ba": "蘑菇树沼泽",
+                "5d2f295ec271acdb": "摩克沙",
+                "74b04b62710052ab": "尼夫海姆站",
+                "54cbda403ac1e8ef": "阿特拉斯庭院",
+                "14bcb0915711d136": "埃吉尔遗迹",
+                "a2f9929ab4d64355": "大地的考验",
+                "3b386ccf95b83396": "黑月的考验",
+                "60ecc260c1312931": "诺尼尔之泪",
+                "3884d4a499b541a9": "神笔画卷",
+                "432f304bd27ba112": "消失的星之歌",
+                "b132c14db09d8a05": "黄昏教堂",
+                "f83325f755aac222": "精灵树桩",
+                "edb0c2993de08c4e": "生命之恩泰",
+                "b7d4b92119164d14": "失魂寺",
+                "f5b6e903f08655fc": "薇娅斯梦境",
+                "6f58063a8bbccba5": "穆斯菲尔斯隧道",
+                "aa7fa86c91735c2c": "星能之战（家族本）"
+            }
+            
+            # 将有映射关系的文件排在前面，没有映射关系的文件排在后面
+            mapped_files = []
+            unmapped_files = []
+            
+            for lua_file in lua_files:
+                file_name_without_ext = lua_file.replace('.lua', '')
+                if file_name_without_ext in filename_mapping:
+                    mapped_files.append(lua_file)
+                else:
+                    unmapped_files.append(lua_file)
+            
+            # 分别排序
+            mapped_files.sort()
+            unmapped_files.sort()
+            
+            # 合并列表：有映射的文件在前，无映射的文件在后
+            lua_files = mapped_files + unmapped_files
+            
+            for lua_file in lua_files:
+                # 获取文件名（不含.lua后缀）
+                file_name_without_ext = lua_file.replace('.lua', '')
+                
+                # 使用映射关系解码文件名
+                decoded_name = filename_mapping.get(file_name_without_ext, file_name_without_ext)
+                
+                if decoded_name != file_name_without_ext:
+                    display_name = f"{decoded_name} ({lua_file})"
+                else:
+                    display_name = lua_file
+                
+                item = QListWidgetItem(display_name)
+                item.setData(Qt.UserRole, lua_file)  # 存储原始文件名
+                self.sync_lua_list_widget.addItem(item)
+                
+            self.log_operation(f"已加载 {len(lua_files)} 个Lua文件")
+            
+        except Exception as e:
+            self.log_operation(f"刷新Lua文件列表出错: {str(e)}")
+            QMessageBox.warning(self, "警告", f"读取Lua文件列表失败: {str(e)}")
+    
+    def on_source_sync_changed(self):
+        """源配置变化时自动刷新Lua文件列表"""
+        if self.source_sync_combo.currentIndex() != -1:
+            self.refresh_sync_lua_files()
+    
+    def read_lua_difficulty(self):
+        """读取选中的Lua文件中的难度设置"""
+        selected_lua_item = self.lua_list_widget.currentItem()
+        if not selected_lua_item:
+            return
+            
+        selected_path = self.target_difficulty_combo.currentData()
+        if not selected_path:
+            return
+            
+        try:
+            lua_file = selected_lua_item.data(Qt.UserRole)
+            lua_file_path = os.path.join(selected_path, lua_file)
+            
+            if not os.path.exists(lua_file_path):
+                return
+            
+            # 读取Lua文件内容
+            with open(lua_file_path, 'r', encoding='gbk', errors='ignore') as f:
+                lua_content = f.read()
+            
+            # 查找难度设置
+            import re
+            pattern = r'副本难度\s*=\s*([^\n\r]+)'
+            match = re.search(pattern, lua_content)
+            
+            if match:
+                current_difficulty = match.group(1).strip()
+                # 确保难度值在有效范围内
+                valid_difficulties = ["剧情", "简单", "普通", "困难", "炼狱"]
+                if current_difficulty not in valid_difficulties:
+                    current_difficulty = "普通"
+                
+                # 更新难度下拉菜单
+                index = self.difficulty_combo.findText(current_difficulty)
+                if index >= 0:
+                    self.difficulty_combo.setCurrentIndex(index)
+                else:
+                    self.difficulty_combo.setCurrentIndex(2)  # 默认普通
+                    
+                self.log_operation(f"已读取 {lua_file} 的难度: {current_difficulty}")
+            else:
+                # 如果没有找到难度设置，设置为默认值
+                self.difficulty_combo.setCurrentIndex(2)  # 默认普通
+                self.log_operation(f"{lua_file} 中未找到难度设置，使用默认值")
+            
+            # 查找探索设置
+            explore_pattern = r'探索副本\s*=\s*([^\n\r]+)'
+            explore_match = re.search(explore_pattern, lua_content)
+            
+            if explore_match:
+                explore_value = explore_match.group(1).strip()
+                # 转换为下拉菜单选项
+                if explore_value.lower() in ["true", "开启", "on", "1"]:
+                    self.explore_combo.setCurrentText("开启")
+                elif explore_value.lower() in ["false", "关闭", "off", "0"]:
+                    self.explore_combo.setCurrentText("关闭")
+                else:
+                    self.explore_combo.setCurrentText("关闭")  # 默认关闭
+                
+                self.log_operation(f"已读取 {lua_file} 的探索设置: {explore_value}")
+            else:
+                # 如果没有找到探索设置，设置为默认值
+                self.explore_combo.setCurrentText("关闭")
+                self.log_operation(f"{lua_file} 中未找到探索设置，使用默认值")                
+        except Exception as e:
+            self.log_operation(f"读取Lua文件难度出错: {str(e)}")
+    
     def change_account(self, account_name):
         """切换当前账号"""
         if account_name in self.accounts:
@@ -1438,7 +1891,7 @@ class FolderSelectorApp(QMainWindow):
         name, ok = QInputDialog.getText(
             self, '输入名称', 
             '为这个配置输入一个名称:', 
-            text=os.path.basename(folder)  # 默认使用文件夹名
+            text=self.decode_gbk_hex(os.path.basename(folder))
         )
         
         if not ok:
@@ -1447,19 +1900,43 @@ class FolderSelectorApp(QMainWindow):
         if not name:
             QMessageBox.warning(self, "警告", "名称不能为空!")
             return
-            
+        
         self.folders[folder] = name
         self.update_list_widget()
         self.log_operation(f"添加配置: {name} ({folder})")
-        
+
         # 如果当前显示的是功能2或3或4，更新下拉菜单
         if self.function_combo.currentIndex() in (2, 3, 4):
             self.update_source_config_combo()
             self.update_default_config_combos()
             self.update_option_config_combos()
-            
+
         # 自动保存配置
         self.save_config()
+    
+    def decode_gbk_hex(self, name):
+        """解码GBK十六进制编码的字符串"""
+        if not name:
+            return name
+            
+        try:
+            # 检查是否是URL编码的GBK十六进制字符串（包含%前缀）
+            if '%' in name:
+                import urllib.parse
+                return urllib.parse.unquote(name, encoding='gbk', errors='ignore')
+            
+            # 检查是否是纯十六进制字符串（无%前缀）
+            hex_string = name.replace(' ', '').replace('\\x', '')
+            if all(c in '0123456789ABCDEFabcdef' for c in hex_string) and len(hex_string) % 2 == 0:
+                decoded_bytes = bytes.fromhex(hex_string)
+                return decoded_bytes.decode('gbk', errors='ignore')
+            
+            # 如果不是十六进制编码，返回原始名称
+            return name
+            
+        except Exception as e:
+            self.log_operation(f"警告: GBK十六进制解码失败: {str(e)}")
+            return name
     
     def edit_name(self):
         """编辑选中文件夹的名称"""
@@ -1486,7 +1963,29 @@ class FolderSelectorApp(QMainWindow):
         if not name:
             QMessageBox.warning(self, "警告", "名称不能为空!")
             return
+        
+        # 检查是否需要转义
+        decoded_name = self.decode_gbk_hex(name)
+        if decoded_name != name:
+            # 检测到可能是GBK十六进制编码，询问用户是否转义
+            reply = QMessageBox.question(
+                self, '检测到编码',
+                f'检测到文件夹名称可能是GBK十六进制编码:\n\n'
+                f'原始名称: {name}\n'
+                f'转义后: {decoded_name}\n\n'
+                f'是否进行转义处理?',
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                QMessageBox.Yes
+            )
             
+            if reply == QMessageBox.Cancel:
+                return
+            elif reply == QMessageBox.Yes:
+                name = decoded_name
+                self.log_operation(f"已转义文件夹名称: {old_name} -> {name}")
+            else:
+                self.log_operation(f"使用原始文件夹名称: {old_name} -> {name}")
+        
         self.folders[path] = name
         self.update_list_widget()
         self.log_operation(f"重命名配置: {old_name} -> {name}")
@@ -1581,6 +2080,10 @@ class FolderSelectorApp(QMainWindow):
                 self.execute_function3()
             elif selected_function == 4:
                 self.execute_function4()
+            elif selected_function == 5:
+                self.execute_function5()
+            elif selected_function == 6:
+                self.execute_function6()
         except Exception as e:
             self.log_operation(f"执行过程中出错: {str(e)}")
             QMessageBox.critical(self, "错误", f"执行过程中出错: {str(e)}")
@@ -2005,6 +2508,164 @@ class FolderSelectorApp(QMainWindow):
             shutil.copy2(current_file + '.bak', current_file)
             if config_name:
                 shutil.copy2(default_target_file + '.bak', default_target_file)
+    
+    def execute_function5(self):
+        """功能5: 更改难度"""
+        if self.target_difficulty_combo.currentIndex() == -1:
+            QMessageBox.warning(self, "警告", "请选择目标配置!")
+            return
+            
+        if self.lua_list_widget.count() == 0:
+            QMessageBox.warning(self, "警告", "请先刷新Lua文件列表!")
+            return
+            
+        selected_lua_item = self.lua_list_widget.currentItem()
+        if not selected_lua_item:
+            QMessageBox.warning(self, "警告", "请选择一个Lua文件!")
+            return
+            
+        selected_difficulty = self.difficulty_combo.currentText()
+        if not selected_difficulty:
+            QMessageBox.warning(self, "警告", "请选择难度!")
+            return
+            
+        selected_explore = self.explore_combo.currentText()
+        if not selected_explore:
+            QMessageBox.warning(self, "警告", "请选择探索设置!")
+            return
+            
+        target_path = self.target_difficulty_combo.currentData()
+        target_name = self.target_difficulty_combo.currentText()
+        lua_file = selected_lua_item.data(Qt.UserRole)
+        
+        self.log_operation(f"执行: 在配置 {target_name} 中读取Lua文件 {lua_file} 的难度并更改为 {selected_difficulty}，探索设置为 {selected_explore}")
+        
+        try:
+            lua_file_path = os.path.join(target_path, lua_file)
+            
+            if not os.path.exists(lua_file_path):
+                QMessageBox.warning(self, "警告", f"Lua文件 {lua_file} 不存在!")
+                return
+            
+            # 备份原文件
+            if self.backup_checkbox.isChecked():
+                self.backup_file(lua_file_path, f"已备份Lua文件: {lua_file}")
+            
+            # 读取Lua文件内容
+            with open(lua_file_path, 'r', encoding='gbk', errors='ignore') as f:
+                lua_content = f.read()
+            
+            # 查找并替换难度设置
+            import re
+            
+            # 查找类似 副本难度=困难 的模式
+            pattern = r'(副本难度\s*=\s*)[^\n\r]+'
+            new_content = re.sub(pattern, f'\\g<1>{selected_difficulty}', lua_content)
+            
+            # 查找并替换探索设置
+            explore_pattern = r'(探索副本\s*=\s*)[^\n\r]+'
+            explore_value = "开启" if selected_explore == "开启" else "关闭"
+            new_content = re.sub(explore_pattern, f'\\g<1>{explore_value}', new_content)
+            
+            # 如果没找到探索设置，尝试添加探索设置
+            # if new_content == lua_content or not re.search(r'探索副本\\s*=', new_content):
+            #     # 在难度设置后面添加探索设置
+            #     difficulty_pattern = r'(副本难度\\s*=\\s*[^\\n\\r]+)'
+            #     if re.search(difficulty_pattern, new_content):
+            #         new_content = re.sub(difficulty_pattern, f'\\g<1>\\n探索副本={explore_value}', new_content)
+            #     else:
+            #         # 如果连难度设置都没找到，在文件开头添加
+            #         new_content = f"探索副本={explore_value}\\n" + new_content
+            
+            # 写入更新后的文件
+            with open(lua_file_path, 'w', encoding='gbk') as f:
+                f.write(new_content)
+            
+            QMessageBox.information(self, "成功", f"已将 {lua_file} 的难度设置为 {selected_difficulty}，探索设置为 {selected_explore}")
+            self.log_operation(f"成功: 已更新 {lua_file} 的难度和探索设置")            
+        except Exception as e:
+            self.log_operation(f"更改难度失败: {str(e)}")
+            QMessageBox.critical(self, "错误", f"更改难度失败: {str(e)}")
+    
+    def execute_function6(self):
+        """功能6: 同步Lua文件"""
+        if self.source_sync_combo.currentIndex() == -1:
+            QMessageBox.warning(self, "警告", "请选择源配置!")
+            return
+            
+        selected_target_data = self.target_sync_combo.checkedData()
+        if not selected_target_data:
+            QMessageBox.warning(self, "警告", "请至少选择一个目标配置!")
+            return
+            
+        if self.sync_lua_list_widget.count() == 0:
+            QMessageBox.warning(self, "警告", "请先刷新Lua文件列表!")
+            return
+            
+        selected_lua_items = self.sync_lua_list_widget.selectedItems()
+        if not selected_lua_items:
+            QMessageBox.warning(self, "警告", "请至少选择一个Lua文件!")
+            return
+            
+        source_path = self.source_sync_combo.currentData()
+        source_name = self.source_sync_combo.currentText()
+        
+        # 获取选中的目标配置列表
+        target_paths = selected_target_data
+        target_names = self.target_sync_combo.checkedItems()
+        
+        # 获取选中的Lua文件列表
+        lua_files = [item.data(Qt.UserRole) for item in selected_lua_items]
+        
+        self.log_operation(f"执行: 从配置 {source_name} 同步 {len(lua_files)} 个Lua文件到 {len(target_paths)} 个目标配置")
+        
+        total_success_count = 0
+        total_error_count = 0
+        
+        for i, target_path in enumerate(target_paths):
+            target_name = target_names[i]
+            self.log_operation(f"正在同步到配置: {target_name}")
+            
+            success_count = 0
+            error_count = 0
+            
+            for lua_file in lua_files:
+                try:
+                    source_file_path = os.path.join(source_path, lua_file)
+                    target_file_path = os.path.join(target_path, lua_file)
+                    
+                    if not os.path.exists(source_file_path):
+                        self.log_operation(f"错误: 源文件 {lua_file} 不存在")
+                        error_count += 1
+                        continue
+                    
+                    # 备份目标文件
+                    if self.backup_checkbox.isChecked() and os.path.exists(target_file_path):
+                        self.backup_file(target_file_path, f"已备份目标文件: {lua_file}")
+                    
+                    # 复制文件
+                    shutil.copy2(source_file_path, target_file_path)
+                    
+                    self.log_operation(f"成功: 已同步 {lua_file} 到 {target_name}")
+                    success_count += 1
+                    
+                except Exception as e:
+                    self.log_operation(f"错误: 同步 {lua_file} 到 {target_name} 失败: {str(e)}")
+                    error_count += 1
+            
+            total_success_count += success_count
+            total_error_count += error_count
+            
+            if error_count == 0:
+                self.log_operation(f"完成: 已成功同步 {success_count} 个Lua文件到配置 {target_name}")
+            else:
+                self.log_operation(f"完成: 同步到 {target_name}: {success_count} 个成功, {error_count} 个失败")
+        
+        # 显示总体结果
+        if total_error_count == 0:
+            QMessageBox.information(self, "成功", f"已成功同步 {total_success_count} 个Lua文件到 {len(target_paths)} 个目标配置")
+        else:
+            QMessageBox.warning(self, "完成", f"同步完成: {total_success_count} 个成功, {total_error_count} 个失败")
     
     def backup_file(self, target_file, message=None):
         """备份文件"""
