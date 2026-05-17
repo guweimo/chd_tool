@@ -188,7 +188,6 @@ class CheckableComboBox(QComboBox):
                 if self.model().item(i).checkState() == Qt.Checked]
 
 
-
 class StyledComboBoxDelegate(QStyledItemDelegate):
     """Custom delegate for styling combo box items"""
     def __init__(self, parent=None):
@@ -380,6 +379,38 @@ class FolderSelectorApp(QMainWindow):
         self.folders = {}  # 存储文件夹数据：{path: name}
         self.equipment_configs = {}  # 存储装备配置数据
         self.load_config()  # 加载保存的配
+        # 文件名映射关系
+        self.filename_mapping = {
+            "a11f6f8b73d79273": "普累罗麻",
+            "96d0f424b3d6a42f": "残缺边界",
+            "3e5c4e25fb39dec6": "葬剑幻谷",
+            "e3963af32f789373": "翡翠世界",
+            "181b75c7f9bc9de7": "被吞噬的魔法办公楼",
+            "854df731d996c054": "归元木匣",
+            "3cc4cdda6cfb6e65": "铁之考验",
+            "232d6af26e1536aa": "赫利波尔要塞",
+            "6e4ca0cb0c935200": "曼赤肯仓库",
+            "d29ecf143abd4460": "丽西泰亚之门",
+            "8730659a18d7b4ba": "蘑菇树沼泽",
+            "5d2f295ec271acdb": "摩克沙",
+            "74b04b62710052ab": "尼夫海姆站",
+            "54cbda403ac1e8ef": "阿特拉斯庭院",
+            "14bcb0915711d136": "埃吉尔遗迹",
+            "a2f9929ab4d64355": "大地的考验",
+            "3b386ccf95b83396": "黑月的考验",
+            "60ecc260c1312931": "诺尼尔之泪",
+            "3884d4a499b541a9": "神笔画卷",
+            "432f304bd27ba112": "消失的星之歌",
+            "b132c14db09d8a05": "黄昏教堂",
+            "f83325f755aac222": "精灵树桩",
+            "edb0c2993de08c4e": "生命之恩泰",
+            "b7d4b92119164d14": "失魂寺",
+            "f5b6e903f08655fc": "薇娅斯梦境",
+            "6f58063a8bbccba5": "穆斯菲尔斯隧道",
+            "aa7fa86c91735c2c": "星能之战（家族本）",
+            '000aaccac0f4305c': "艾乌加蒙剧场",
+            '46d09fe1bda4c623': "深渊之境",
+        }
     
     def init_ui(self):
         """初始化用户界面"""
@@ -1625,44 +1656,13 @@ class FolderSelectorApp(QMainWindow):
                 self.lua_list_widget.addItem("未找到.lua文件")
                 return
             
-            # 文件名映射关系
-            filename_mapping = {
-                "a11f6f8b73d79273": "普累罗麻",
-                "96d0f424b3d6a42f": "残缺边界",
-                "3e5c4e25fb39dec6": "葬剑幻谷",
-                "e3963af32f789373": "翡翠世界",
-                "181b75c7f9bc9de7": "被吞噬的魔法办公楼",
-                "854df731d996c054": "归元木匣",
-                "3cc4cdda6cfb6e65": "铁之考验",
-                "232d6af26e1536aa": "赫利波尔要塞",
-                "6e4ca0cb0c935200": "曼赤肯仓库",
-                "d29ecf143abd4460": "丽西泰亚之门",
-                "8730659a18d7b4ba": "蘑菇树沼泽",
-                "5d2f295ec271acdb": "摩克沙",
-                "74b04b62710052ab": "尼夫海姆站",
-                "54cbda403ac1e8ef": "阿特拉斯庭院",
-                "14bcb0915711d136": "埃吉尔遗迹",
-                "a2f9929ab4d64355": "大地的考验",
-                "3b386ccf95b83396": "黑月的考验",
-                "60ecc260c1312931": "诺尼尔之泪",
-                "3884d4a499b541a9": "神笔画卷",
-                "432f304bd27ba112": "消失的星之歌",
-                "b132c14db09d8a05": "黄昏教堂",
-                "f83325f755aac222": "精灵树桩",
-                "edb0c2993de08c4e": "生命之恩泰",
-                "b7d4b92119164d14": "失魂寺",
-                "f5b6e903f08655fc": "薇娅斯梦境",
-                "6f58063a8bbccba5": "穆斯菲尔斯隧道",
-                "aa7fa86c91735c2c": "星能之战（家族本）"
-            }
-            
             # 将有映射关系的文件排在前面，没有映射关系的文件排在后面
             mapped_files = []
             unmapped_files = []
             
             for lua_file in lua_files:
                 file_name_without_ext = lua_file.replace('.lua', '')
-                if file_name_without_ext in filename_mapping:
+                if file_name_without_ext in self.filename_mapping:
                     mapped_files.append(lua_file)
                 else:
                     unmapped_files.append(lua_file)
@@ -1679,7 +1679,7 @@ class FolderSelectorApp(QMainWindow):
                 file_name_without_ext = lua_file.replace('.lua', '')
                 
                 # 使用映射关系解码文件名
-                decoded_name = filename_mapping.get(file_name_without_ext, file_name_without_ext)
+                decoded_name = self.filename_mapping.get(file_name_without_ext, file_name_without_ext)
                 
                 if decoded_name != file_name_without_ext:
                     display_name = f"{decoded_name} ({lua_file})"
@@ -1719,44 +1719,13 @@ class FolderSelectorApp(QMainWindow):
                 self.sync_lua_list_widget.addItem("未找到.lua文件")
                 return
             
-            # 文件名映射关系
-            filename_mapping = {
-                "a11f6f8b73d79273": "普累罗麻",
-                "96d0f424b3d6a42f": "残缺边界",
-                "3e5c4e25fb39dec6": "葬剑幻谷",
-                "e3963af32f789373": "翡翠世界",
-                "181b75c7f9bc9de7": "被吞噬的魔法办公楼",
-                "854df731d996c054": "归元木匣",
-                "3cc4cdda6cfb6e65": "铁之考验",
-                "232d6af26e1536aa": "赫利波尔要塞",
-                "6e4ca0cb0c935200": "曼赤肯仓库",
-                "d29ecf143abd4460": "丽西泰亚之门",
-                "8730659a18d7b4ba": "蘑菇树沼泽",
-                "5d2f295ec271acdb": "摩克沙",
-                "74b04b62710052ab": "尼夫海姆站",
-                "54cbda403ac1e8ef": "阿特拉斯庭院",
-                "14bcb0915711d136": "埃吉尔遗迹",
-                "a2f9929ab4d64355": "大地的考验",
-                "3b386ccf95b83396": "黑月的考验",
-                "60ecc260c1312931": "诺尼尔之泪",
-                "3884d4a499b541a9": "神笔画卷",
-                "432f304bd27ba112": "消失的星之歌",
-                "b132c14db09d8a05": "黄昏教堂",
-                "f83325f755aac222": "精灵树桩",
-                "edb0c2993de08c4e": "生命之恩泰",
-                "b7d4b92119164d14": "失魂寺",
-                "f5b6e903f08655fc": "薇娅斯梦境",
-                "6f58063a8bbccba5": "穆斯菲尔斯隧道",
-                "aa7fa86c91735c2c": "星能之战（家族本）"
-            }
-            
             # 将有映射关系的文件排在前面，没有映射关系的文件排在后面
             mapped_files = []
             unmapped_files = []
             
             for lua_file in lua_files:
                 file_name_without_ext = lua_file.replace('.lua', '')
-                if file_name_without_ext in filename_mapping:
+                if file_name_without_ext in self.filename_mapping:
                     mapped_files.append(lua_file)
                 else:
                     unmapped_files.append(lua_file)
@@ -1773,7 +1742,7 @@ class FolderSelectorApp(QMainWindow):
                 file_name_without_ext = lua_file.replace('.lua', '')
                 
                 # 使用映射关系解码文件名
-                decoded_name = filename_mapping.get(file_name_without_ext, file_name_without_ext)
+                decoded_name = self.filename_mapping.get(file_name_without_ext, file_name_without_ext)
                 
                 if decoded_name != file_name_without_ext:
                     display_name = f"{decoded_name} ({lua_file})"
@@ -2571,16 +2540,16 @@ class FolderSelectorApp(QMainWindow):
             new_content = re.sub(pattern, f'\\g<1>{selected_difficulty}', lua_content)
             
             # 查找并替换探索设置
-            explore_pattern = r'(探索副本\s*=\s*)[^\n\r]+'
+            explore_pattern = r'(探索副本\s*=\s*)[^(\n\r)]+'
             explore_value = "开启" if selected_explore == "开启" else "关闭"
             new_content = re.sub(explore_pattern, f'\\g<1>{explore_value}', new_content)
             
             # 如果没找到探索设置，尝试添加探索设置
-            # if new_content == lua_content or not re.search(r'探索副本\\s*=', new_content):
-            #     # 在难度设置后面添加探索设置
-            #     difficulty_pattern = r'(副本难度\\s*=\\s*[^\\n\\r]+)'
-            #     if re.search(difficulty_pattern, new_content):
-            #         new_content = re.sub(difficulty_pattern, f'\\g<1>\\n探索副本={explore_value}', new_content)
+            if not re.search(r'探索副本\s*=', new_content):
+                # 在难度设置后面添加探索设置
+                difficulty_pattern = r'(副本难度\s*=\s*[^\n\r]+)'
+                if re.search(difficulty_pattern, new_content):
+                    new_content = re.sub(difficulty_pattern, f'\\g<1>\n探索副本={explore_value}', new_content)
             #     else:
             #         # 如果连难度设置都没找到，在文件开头添加
             #         new_content = f"探索副本={explore_value}\\n" + new_content
