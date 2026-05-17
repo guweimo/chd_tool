@@ -2247,7 +2247,15 @@ class FolderSelectorApp(QMainWindow):
                         updated_count += 1
                         self.log_operation(f"成功更新配置: {target_name}")
                     else:
-                        self.log_operation(f"配置 {target_name} 中未找到名称匹配的装备")
+                        target_data["diysuit_item"].append({
+                            "name": target_config_name,
+                            "data": config_data["data"]
+                        })
+                        with open(target_file, 'w', encoding='gb2312') as f:
+                            json.dump(target_data, f, indent=4, ensure_ascii=False)
+                        updated_count += 1
+                        self.log_operation(f"成功新增配置: {target_name}")
+                        # self.log_operation(f"配置 {target_name} 中未找到名称匹配的装备")
                 else:
                     self.log_operation(f"配置 {target_name} 中没有diysuit_item数据")
             
