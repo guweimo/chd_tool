@@ -40,6 +40,7 @@ class RainbowIslandManager:
         self.window_cache = {}  # key: pid, value: list of window handles
         self.last_cache_time = 0
         self.cache_ttl = 5  # 缓存有效期5秒
+        self.hidden_windows = {}
         
         # 加载已有数据
         self.load_applications()
@@ -50,7 +51,6 @@ class RainbowIslandManager:
         # 启动后台监控线程
         self.monitor_thread = threading.Thread(target=self.monitor_processes, daemon=True)
         self.monitor_thread.start()
-        self.hidden_windows = {} 
     
     def create_widgets(self):
         # 主框架
@@ -261,6 +261,8 @@ class RainbowIslandManager:
                 str(pid),
                 "双击操作"
             ), tags=(str(pid), proc_info['status']))
+            window_info = self.get_game_windows(pid)
+            self.hidden_windows[pid] = window_info
         
         # 绑定双击事件
         self.tree.bind("<Double-1>", self.on_item_double_click)
@@ -359,9 +361,15 @@ class RainbowIslandManager:
                 title_buffer = ctypes.create_unicode_buffer(title_length + 1)
                 ctypes.windll.user32.GetWindowTextW(hwnd, title_buffer, title_length + 1)
                 
+                # 获取窗口位置和大小
+                rect = ctypes.wintypes.RECT()
+                ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                
                 window_info_list.append({
                     'handle': hwnd,
                     'title': title_buffer.value,
+                    'position': (rect.left, rect.top),
+                    'size': (rect.right - rect.left, rect.bottom - rect.top),
                     'process_id': pid
                 })
             return True
@@ -374,6 +382,52 @@ class RainbowIslandManager:
         
         return window_info_list
     
+    def get_game_windows(self, pid):
+        """获取指定进程的所有窗口信息"""
+        current_time = time.time()
+        
+        # 检查缓存是否有效
+        if (pid in self.window_cache and 
+            current_time - self.last_cache_time < self.cache_ttl):
+            return self.window_cache[pid]
+        
+        # 重新枚举窗口
+        window_info_list = []
+        
+        @ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+        def enum_windows_proc(hwnd, lParam):
+            # 获取窗口的进程ID
+            lpdw_process_id = ctypes.wintypes.DWORD()
+            ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(lpdw_process_id))
+            
+            if lpdw_process_id.value == pid:
+                # 获取窗口标题
+                title_length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+                title_buffer = ctypes.create_unicode_buffer(title_length + 1)
+                ctypes.windll.user32.GetWindowTextW(hwnd, title_buffer, title_length + 1)
+                
+                # 获取窗口位置和大小
+                rect = ctypes.wintypes.RECT()
+                ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                
+                window_info_list.append({
+                    'handle': hwnd,
+                    'title': title_buffer.value,
+                    'position': (rect.left, rect.top),
+                    'size': (rect.right - rect.left, rect.bottom - rect.top),
+                    'process_id': pid
+                })
+            return True
+        
+        ctypes.windll.user32.EnumWindows(enum_windows_proc, 0)
+
+        window_info = {}
+        for w in window_info_list:
+            if "LaTale Client" in w['title']:
+                window_info = w
+
+        return window_info
+
     def check_window_visibility(self, pid):
         """检查指定进程的窗口是否可见（优化版本）"""
         try:
@@ -658,13 +712,16 @@ class RainbowIslandManager:
                         self.unmute_process_audio(pid)
                         self.enhanced_show_window(hwnd)
                         ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_SHOWNORMAL)
+                        window_placement = self.hidden_windows[pid]
+                        x, y = window_placement['position']
+                        width, height = window_placement['size']
                         win32gui.SetWindowPos(
                             hwnd, 
                             win32con.HWND_BOTTOM,  # HWND_BOTTOM
-                            129,  # 右边缘
-                            57,  # 下边缘
-                            1936,  # 最小宽度
-                            1119,  # 最小高度
+                            x,  # 右边缘
+                            y,  # 下边缘
+                            width,  # 最小宽度
+                            height,  # 最小高度
                             win32con.SWP_SHOWWINDOW
                         )
                         # 显示窗口并恢复
