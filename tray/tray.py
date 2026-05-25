@@ -262,7 +262,9 @@ class RainbowIslandManager:
                 "双击操作"
             ), tags=(str(pid), proc_info['status']))
             window_info = self.get_game_windows(pid)
-            self.hidden_windows[pid] = window_info
+            width, height = window_info['size']
+            if width > 500 or self.hidden_windows.get(pid) is None:
+                self.hidden_windows[pid] = window_info
         
         # 绑定双击事件
         self.tree.bind("<Double-1>", self.on_item_double_click)
@@ -715,6 +717,9 @@ class RainbowIslandManager:
                         window_placement = self.hidden_windows[pid]
                         x, y = window_placement['position']
                         width, height = window_placement['size']
+                        if width < 500 or height < 100:
+                            width, height = 1936, 1119
+                            x, y = 129, 57
                         win32gui.SetWindowPos(
                             hwnd, 
                             win32con.HWND_BOTTOM,  # HWND_BOTTOM
