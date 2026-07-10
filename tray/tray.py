@@ -160,7 +160,7 @@ class RainbowIslandManager:
                     
                     # 检查是否包含关键词
                     for keyword in rainbow_keywords:
-                        if keyword.lower() in name_lower or keyword.lower() in cmdline.lower():
+                        if keyword.lower() in name_lower:
                             found_processes.append({
                                 'pid': proc_info['pid'],
                                 'name': proc_info['name'],
@@ -237,7 +237,7 @@ class RainbowIslandManager:
                 
                 # 检查是否包含关键词
                 for keyword in rainbow_keywords:
-                    if keyword.lower() in name_lower or keyword.lower() in cmdline.lower():
+                    if keyword.lower() in name_lower:
                         pid = proc_info['pid']
                         self.running_processes[pid] = {
                             'pid': pid,
@@ -262,9 +262,10 @@ class RainbowIslandManager:
                 "双击操作"
             ), tags=(str(pid), proc_info['status']))
             window_info = self.get_game_windows(pid)
-            width, height = window_info['size']
-            if width > 500 or self.hidden_windows.get(pid) is None:
-                self.hidden_windows[pid] = window_info
+            if window_info and 'size' in window_info:
+                width, height = window_info['size']
+                if width > 500 or self.hidden_windows.get(pid) is None:
+                    self.hidden_windows[pid] = window_info
         
         # 绑定双击事件
         self.tree.bind("<Double-1>", self.on_item_double_click)
