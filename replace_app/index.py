@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget,
 from PyQt5.QtCore import Qt, QSize, QEvent
 from PyQt5.QtGui import QFont, QColor, QPalette, QIcon, QStandardItemModel, QStandardItem, QCursor
 from pathlib import Path
+from filename_mapping import get_filename_mapping
 
 CONFIG_FILE = "accounts_config.json"
 
@@ -380,37 +381,7 @@ class FolderSelectorApp(QMainWindow):
         self.equipment_configs = {}  # 存储装备配置数据
         self.load_config()  # 加载保存的配
         # 文件名映射关系
-        self.filename_mapping = {
-            "a11f6f8b73d79273": "普累罗麻",
-            "96d0f424b3d6a42f": "残缺边界",
-            "3e5c4e25fb39dec6": "葬剑幻谷",
-            "e3963af32f789373": "翡翠世界",
-            "181b75c7f9bc9de7": "被吞噬的魔法办公楼",
-            "854df731d996c054": "归元木匣",
-            "3cc4cdda6cfb6e65": "铁之考验",
-            "232d6af26e1536aa": "赫利波尔要塞",
-            "6e4ca0cb0c935200": "曼赤肯仓库",
-            "d29ecf143abd4460": "丽西泰亚之门",
-            "8730659a18d7b4ba": "蘑菇树沼泽",
-            "5d2f295ec271acdb": "摩克沙",
-            "74b04b62710052ab": "尼夫海姆站",
-            "54cbda403ac1e8ef": "阿特拉斯庭院",
-            "14bcb0915711d136": "埃吉尔遗迹",
-            "a2f9929ab4d64355": "大地的考验",
-            "3b386ccf95b83396": "黑月的考验",
-            "60ecc260c1312931": "诺尼尔之泪",
-            "3884d4a499b541a9": "神笔画卷",
-            "432f304bd27ba112": "消失的星之歌",
-            "b132c14db09d8a05": "黄昏教堂",
-            "f83325f755aac222": "精灵树桩",
-            "edb0c2993de08c4e": "生命之恩泰",
-            "b7d4b92119164d14": "失魂寺",
-            "f5b6e903f08655fc": "薇娅斯梦境",
-            "6f58063a8bbccba5": "穆斯菲尔斯隧道",
-            "aa7fa86c91735c2c": "星能之战（家族本）",
-            '000aaccac0f4305c': "艾乌加蒙剧场",
-            '46d09fe1bda4c623': "深渊之境",
-        }
+        self.filename_mapping = get_filename_mapping()
     
     def init_ui(self):
         """初始化用户界面"""
@@ -472,7 +443,7 @@ class FolderSelectorApp(QMainWindow):
             }
             QListWidget::item {
                 border-bottom: 1px solid #eee;
-                height: 50px;
+                height: 38px;
             }
             QListWidget::item:hover {
                 background: #f5f5f5;
@@ -1678,8 +1649,9 @@ class FolderSelectorApp(QMainWindow):
                 else:
                     unmapped_files.append(lua_file)
             
-            # 分别排序
-            mapped_files.sort()
+            # 有映射的文件按 filename_mapping 中的顺序排序
+            mapping_order = list(self.filename_mapping.keys())
+            mapped_files.sort(key=lambda f: mapping_order.index(f.replace('.lua', '')))
             unmapped_files.sort()
             
             # 合并列表：有映射的文件在前，无映射的文件在后
@@ -2047,7 +2019,7 @@ class FolderSelectorApp(QMainWindow):
             
             # 创建QListWidgetItem
             item = QListWidgetItem()
-            item.setSizeHint(QSize(0, 60))  # 增大项高度
+            item.setSizeHint(QSize(0, 48))  # 调低项高度
             
             # 添加到列表
             self.list_widget.addItem(item)
