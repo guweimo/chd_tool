@@ -424,15 +424,15 @@ class FolderSelectorApp(QMainWindow):
         
         # 左侧面板（文件夹列表部分）
         left_panel = self.create_left_panel()
-        main_layout.addWidget(left_panel, 40)  # 左侧占40%宽度
+        main_layout.addWidget(left_panel, 25)  # 左侧占25%宽度
         
         # 中间面板（功能部分）
         center_panel = self.create_center_panel()
-        main_layout.addWidget(center_panel, 32)  # 中间占30%宽度
+        main_layout.addWidget(center_panel, 50)  # 中间占50%宽度
         
         # 右侧面板（日志部分）
         right_panel = self.create_right_panel()
-        main_layout.addWidget(right_panel, 28)  # 右侧占30%宽度
+        main_layout.addWidget(right_panel, 25)  # 右侧占25%宽度
         
         main_widget.setLayout(main_layout)
         self.update_list_widget()  # 初始化列表显示
@@ -591,13 +591,13 @@ class FolderSelectorApp(QMainWindow):
         button_layout.setSpacing(15)
         
         # 添加文件夹按钮
-        add_button = QPushButton("添加配置文件夹")
+        add_button = QPushButton("添加配置")
         add_button.setStyleSheet("""
             QPushButton {
                 padding: 8px 15px;
                 font-family: PingFang SC;
                 font-size: 14px;
-                min-width: 100px;
+                min-width: 80px;
                 background: #5c9eff;
                 color: white;
                 border: none;
@@ -611,13 +611,13 @@ class FolderSelectorApp(QMainWindow):
         button_layout.addWidget(add_button)
         
         # 编辑名称按钮
-        edit_button = QPushButton("编辑名称")
+        edit_button = QPushButton("编辑")
         edit_button.setStyleSheet("""
             QPushButton {
                 padding: 8px 15px;
                 font-family: PingFang SC;
                 font-size: 14px;
-                min-width: 100px;
+                min-width: 60px;
                 background: #6c757d;
                 color: white;
                 border: none;
@@ -631,13 +631,13 @@ class FolderSelectorApp(QMainWindow):
         button_layout.addWidget(edit_button)
         
         # 移除选中文件夹按钮
-        remove_button = QPushButton("移除选中")
+        remove_button = QPushButton("移除")
         remove_button.setStyleSheet("""
             QPushButton {
                 padding: 8px 15px;
                 font-family: PingFang SC;
                 font-size: 14px;
-                min-width: 100px;
+                min-width: 60px;
                 background: #dc3545;
                 color: white;
                 border: none;
@@ -947,6 +947,7 @@ class FolderSelectorApp(QMainWindow):
         self.item_filter_check = QCheckBox("物品设置")
         self.filter_pick2_check = QCheckBox("额外模糊过滤")
         self.filter_throw2_check = QCheckBox("额外模糊保留")
+        self.recruit_team_check = QCheckBox("招募组队")
         
         # 第二列复选框
         self.item_buff_check = QCheckBox("保护-其他操作")
@@ -963,7 +964,7 @@ class FolderSelectorApp(QMainWindow):
         grid_layout.addWidget(self.item_filter_check, 3, 0)
         grid_layout.addWidget(self.filter_pick2_check, 4, 0)
         grid_layout.addWidget(self.filter_throw2_check, 5, 0)
-        
+        grid_layout.addWidget(self.recruit_team_check, 6, 0)
         grid_layout.addWidget(self.item_buff_check, 0, 1)
         grid_layout.addWidget(self.diy_trigger_check, 1, 1)
         grid_layout.addWidget(self.item_disassemble_check, 2, 1)
@@ -1037,7 +1038,8 @@ class FolderSelectorApp(QMainWindow):
                 color: white;
             }
         """)
-        layout.addWidget(self.lua_list_widget)
+        self.lua_list_widget.setMinimumHeight(250)
+        layout.addWidget(self.lua_list_widget, stretch=1)
         
         # 难度选择
         layout.addWidget(QLabel("3. 难度选择:"))
@@ -1054,6 +1056,15 @@ class FolderSelectorApp(QMainWindow):
         self.explore_combo.setStyleSheet(self.select_style)
         self.explore_combo.addItems(["关闭", "开启"])
         layout.addWidget(self.explore_combo)
+        
+        # 世界组队设置
+        layout.addWidget(QLabel("5. 世界组队:"))
+        self.world_team_combo = QComboBox()
+        self.world_team_combo.setItemDelegate(StyledComboBoxDelegate(self.world_team_combo))
+        self.world_team_combo.setStyleSheet(self.select_style)
+        self.world_team_combo.addItems(["关闭", "开启"])
+        self.world_team_combo.setEnabled(False)  # 默认禁用，读取Lua文件后根据是否存在该字段决定是否启用
+        layout.addWidget(self.world_team_combo)
         
         container.setLayout(layout)
         container.hide()
@@ -1829,6 +1840,29 @@ class FolderSelectorApp(QMainWindow):
                 # 如果没有找到探索设置，设置为默认值
                 self.explore_combo.setCurrentText("关闭")
                 self.log_operation(f"{lua_file} 中未找到探索设置，使用默认值")                
+            
+            # 查找世界组队设置
+            world_team_pattern = r'世界组队\s*=\s*([^\n\r]+)'
+            world_team_match = re.search(world_team_pattern, lua_content)
+            
+            if world_team_match:
+                world_team_value = world_team_match.group(1).strip()
+                # 启用世界组队下拉框
+                self.world_team_combo.setEnabled(True)
+                # 转换为下拉菜单选项
+                if world_team_value.lower() in ["true", "开启", "on", "1"]:
+                    self.world_team_combo.setCurrentText("开启")
+                elif world_team_value.lower() in ["false", "关闭", "off", "0"]:
+                    self.world_team_combo.setCurrentText("关闭")
+                else:
+                    self.world_team_combo.setCurrentText("关闭")  # 默认关闭
+                
+                self.log_operation(f"已读取 {lua_file} 的世界组队设置: {world_team_value}")
+            else:
+                # 如果没有找到世界组队设置，禁用下拉框（不可设置）
+                self.world_team_combo.setEnabled(False)
+                self.world_team_combo.setCurrentText("关闭")
+                self.log_operation(f"{lua_file} 中未找到世界组队设置，不可设置")                
         except Exception as e:
             self.log_operation(f"读取Lua文件难度出错: {str(e)}")
     
@@ -2338,7 +2372,8 @@ class FolderSelectorApp(QMainWindow):
                self.pet_build_check.isChecked() or
                self.item_disassemble_check.isChecked() or
                self.item_filter_check.isChecked() or
-               self.store_items_check.isChecked()):
+               self.store_items_check.isChecked() or 
+               self.recruit_team_check.isChecked()):
             QMessageBox.warning(self, "警告", "请至少选择一个要替换的选项!")
             return
         
@@ -2429,6 +2464,9 @@ class FolderSelectorApp(QMainWindow):
                 fields_to_copy.append(("item_filter_4", "物品设置4"))
             if self.store_items_check.isChecked():
                 fields_to_copy.append(("store_items", "存取材料"))
+            if self.recruit_team_check.isChecked():
+                fields_to_copy.append(("auto_team_world_room_name", "招募队伍名"))
+                fields_to_copy.append(("auto_team_world_room_password", "招募队伍密码"))
 
             # 处理每个目标配置
             updated_count = 0
@@ -2515,7 +2553,15 @@ class FolderSelectorApp(QMainWindow):
         target_name = self.target_difficulty_combo.currentText()
         lua_file = selected_lua_item.data(Qt.UserRole)
         
-        self.log_operation(f"执行: 在配置 {target_name} 中读取Lua文件 {lua_file} 的难度并更改为 {selected_difficulty}，探索设置为 {selected_explore}")
+        selected_world_team = self.world_team_combo.currentText()
+        world_team_enabled = self.world_team_combo.isEnabled()
+        
+        log_msg = f"执行: 在配置 {target_name} 中读取Lua文件 {lua_file} 的难度并更改为 {selected_difficulty}，探索设置为 {selected_explore}"
+        if world_team_enabled:
+            log_msg += f"，世界组队设置为 {selected_world_team}"
+        else:
+            log_msg += "，世界组队未在文件中找到，不可设置"
+        self.log_operation(log_msg)
         
         try:
             lua_file_path = os.path.join(target_path, lua_file)
@@ -2554,12 +2600,23 @@ class FolderSelectorApp(QMainWindow):
             #         # 如果连难度设置都没找到，在文件开头添加
             #         new_content = f"探索副本={explore_value}\\n" + new_content
             
+            # 查找并替换世界组队设置（仅当文件中存在该字段时才替换）
+            if world_team_enabled:
+                world_team_pattern = r'(世界组队\s*=\s*)[^(\n\r)]+'
+                world_team_value = "开启" if selected_world_team == "开启" else "关闭"
+                new_content = re.sub(world_team_pattern, f'\\g<1>{world_team_value}', new_content)
+            
             # 写入更新后的文件
             with open(lua_file_path, 'w', encoding='gbk') as f:
                 f.write(new_content)
             
-            QMessageBox.information(self, "成功", f"已将 {lua_file} 的难度设置为 {selected_difficulty}，探索设置为 {selected_explore}")
-            self.log_operation(f"成功: 已更新 {lua_file} 的难度和探索设置")            
+            success_msg = f"已将 {lua_file} 的难度设置为 {selected_difficulty}，探索设置为 {selected_explore}"
+            if world_team_enabled:
+                success_msg += f"，世界组队设置为 {selected_world_team}"
+            else:
+                success_msg += "，世界组队未在文件中找到，未做更改"
+            QMessageBox.information(self, "成功", success_msg)
+            self.log_operation(f"成功: 已更新 {lua_file} 的难度和探索设置" + (f"及世界组队设置" if world_team_enabled else ""))            
         except Exception as e:
             self.log_operation(f"更改难度失败: {str(e)}")
             QMessageBox.critical(self, "错误", f"更改难度失败: {str(e)}")
