@@ -1712,9 +1712,11 @@ class FolderSelectorApp(QMainWindow):
                     mapped_files.append(lua_file)
                 else:
                     unmapped_files.append(lua_file)
+
             
-            # 分别排序
-            mapped_files.sort()
+            # 有映射的文件按 filename_mapping 中的顺序排序
+            mapping_order = list(self.filename_mapping.keys())
+            mapped_files.sort(key=lambda f: mapping_order.index(f.replace('.lua', '')))
             unmapped_files.sort()
             
             # 合并列表：有映射的文件在前，无映射的文件在后
