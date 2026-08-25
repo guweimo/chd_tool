@@ -3,3 +3,4 @@ dist
 .venv
 accounts_config.json
 Config
+__pycache__
