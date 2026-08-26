@@ -220,11 +220,8 @@ class AutoClickerMixin:
         self._click_event.clear()
 
     def _tray_notify(self, message, title="提示"):
-        if hasattr(self, 'tray_icon') and self.tray_icon is not None:
-            try:
-                self.tray_icon.showMessage(title, message, QSystemTrayIcon.Information, 3000)
-            except Exception:
-                pass
+        # 托盘气泡通知已禁用
+        pass
 
 
 class RainbowIslandManager(QMainWindow, AutoClickerMixin):
