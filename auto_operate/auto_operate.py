@@ -824,10 +824,12 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
                             x, y = window_placement['position']
                             width, height = window_placement['size']
                         else:
-                            x, y, width, height = 235, 109, 3371, 1941
+                            # 235, 109, 3371, 1941
+                            # xyh 226, 100, 3388, 1958
+                            x, y, width, height = 226, 100, 3388, 1958
                         if width < 500 or height < 100:
-                            width, height = 3371, 1941
-                            x, y = 235, 109
+                            width, height = 3388, 1958
+                            x, y = 226, 100
                         win32gui.SetWindowPos(hwnd, win32con.HWND_BOTTOM, x, y, width, height, win32con.SWP_SHOWWINDOW)
                         ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
                         ctypes.windll.user32.SetForegroundWindow(hwnd)
