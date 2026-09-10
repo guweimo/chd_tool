@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QGroupBox, QMenu, QMessageBox, QFileDialog, QDialog, QTextEdit,
     QAbstractItemView, QFrame, QStyle
 )
-from PySide6.QtCore import Qt, QTimer, QPoint
+from PySide6.QtCore import Qt, QTimer, QPoint, Signal
 from PySide6.QtGui import QIcon, QFont, QColor, QAction
 from PySide6.QtWidgets import QSystemTrayIcon
 
@@ -33,6 +33,72 @@ SW_RESTORE = 9
 
 # Windows API类型定义
 LRESULT = ctypes.c_long
+
+
+class DraggableTableWidget(QTableWidget):
+    """支持整行拖拽排序的表格
+
+    不依赖 Qt 的 DnD 机制（避免依赖 item 的可选中标志），
+    通过鼠标按下并移动来实时调整行的顺序。
+    """
+
+    rowsMoved = Signal()
+
+    # 触发拖拽所需的最小鼠标位移（像素）
+    DRAG_THRESHOLD = 10
+
+    def __init__(self, rows=0, columns=0, parent=None):
+        super().__init__(rows, columns, parent)
+        self._drag_row = -1
+        self._drag_start = QPoint()
+        self._dragging = False
+        # 关闭内建拖放，使用自定义整行拖拽
+        self.setDragDropMode(QAbstractItemView.NoDragDrop)
+        self.viewport().setCursor(Qt.ArrowCursor)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_row = self.rowAt(event.position().toPoint().y())
+            self._drag_start = event.position().toPoint()
+            self._dragging = False
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (event.buttons() & Qt.LeftButton) and self._drag_row >= 0:
+            pos = event.position().toPoint()
+            if not self._dragging:
+                delta = (pos - self._drag_start).manhattanLength()
+                if delta >= self.DRAG_THRESHOLD:
+                    self._dragging = True
+            if self._dragging:
+                target = self.rowAt(pos.y())
+                if target >= 0 and target != self._drag_row:
+                    self._move_row(self._drag_row, target)
+                    self._drag_row = target
+                return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._dragging:
+            self._dragging = False
+            self._drag_row = -1
+            self.rowsMoved.emit()
+            event.accept()
+            return
+        self._drag_row = -1
+        super().mouseReleaseEvent(event)
+
+    def _move_row(self, src, dst):
+        """移动整行（含所有单元格）"""
+        if src == dst or src < 0 or dst < 0:
+            return
+        cols = self.columnCount()
+        rows = [[self.takeItem(r, c) for c in range(cols)] for r in range(self.rowCount())]
+        rows.insert(dst, rows.pop(src))
+        for r, row_items in enumerate(rows):
+            for c, item in enumerate(row_items):
+                if item is not None:
+                    self.setItem(r, c, item)
 
 
 def get_dpi_scale():
@@ -115,6 +181,7 @@ class AutoClickerMixin:
                     self._start_buy_thread(self.position3, "属性免疫")
                 elif key == keyboard.Key.f9:
                     self.current_pos = self.mouse_controller.position
+                    print(self.current_pos)
                     self._tray_notify(f"当前坐标: {self.current_pos}", "坐标信息")
 
             if self.auto_buy:
@@ -134,11 +201,11 @@ class AutoClickerMixin:
                 elif key == keyboard.Key.f2:
                     current_pos = self.mouse_controller.position
                     time.sleep(0.05)
-                    self.mouse_controller.position = (1031, 1480)
+                    self.mouse_controller.position = (1163, 1567)
                     time.sleep(0.05)
                     self.mouse_controller.click(Button.left)
                     time.sleep(0.05)
-                    self.mouse_controller.position = (1854, 1265)
+                    self.mouse_controller.position = (1854, 1267)
                     time.sleep(0.05)
                     self.mouse_controller.click(Button.left)
                     time.sleep(0.05)
@@ -254,6 +321,8 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
         self.cache_ttl = 5
         self.hidden_windows = {}
         self.tray_icon = None
+        # 用户拖拽排序后记录的进程顺序（pid 列表）
+        self.row_order = []
 
         self.load_applications()
         self.create_widgets()
@@ -379,7 +448,7 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
         list_layout = QVBoxLayout(list_group)
         list_layout.setContentsMargins(pad, pad, pad, pad)
 
-        self.table = QTableWidget(0, 5)
+        self.table = DraggableTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(["应用名称", "路径", "状态", "进程ID", "操作"])
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -397,6 +466,8 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._show_table_menu)
         self.table.itemDoubleClicked.connect(self.on_item_double_click)
+        # 行拖拽排序完成后记录新顺序
+        self.table.rowsMoved.connect(self._on_rows_moved)
 
         list_layout.addWidget(self.table)
         layout.addWidget(list_group, stretch=1)
@@ -543,7 +614,8 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
             "  Alt+F2    一键购买操作2\n\n"
             "【列表操作】\n"
             "  双击行      隐藏/显示对应进程窗口\n"
-            "  右键点击    打开进程操作菜单（隐藏/显示/停止/窗口信息）\n\n"
+            "  右键点击    打开进程操作菜单（隐藏/显示/停止/窗口信息）\n"
+            "  按住拖动行  调整进程显示顺序（刷新后保持）\n\n"
             "【窗口行为】\n"
             "  关闭主窗口后程序最小化到系统托盘\n"
             "  托盘右键菜单可显示主窗口、强制停止操作或退出程序\n"
@@ -588,7 +660,13 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
-        for pid, proc_info in self.running_processes.items():
+        # 按用户拖拽排序后的顺序显示，新出现的进程追加到末尾
+        ordered_pids = [p for p in self.row_order if p in self.running_processes]
+        ordered_pids += [p for p in self.running_processes if p not in ordered_pids]
+        self.row_order = ordered_pids
+
+        for pid in ordered_pids:
+            proc_info = self.running_processes[pid]
             row = self.table.rowCount()
             self.table.insertRow(row)
             values = [
@@ -608,6 +686,19 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
                 width, height = window_info['size']
                 if width > 500 or self.hidden_windows.get(pid) is None:
                     self.hidden_windows[pid] = window_info
+
+    def _on_rows_moved(self):
+        """用户拖拽排序完成后，记录新的行顺序"""
+        pids = []
+        for r in range(self.table.rowCount()):
+            item = self.table.item(r, 3)
+            if item is not None:
+                try:
+                    pids.append(int(item.text()))
+                except ValueError:
+                    continue
+        self.row_order = pids
+        self.status_label.setText("列表顺序已更新")
 
     # ---- 窗口管理 ----
 
