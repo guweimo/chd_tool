@@ -872,13 +872,18 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
                         # 隐藏前记录窗口原始位置和尺寸，恢复时保持原样
                         rect = ctypes.wintypes.RECT()
                         ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
-                        self.hidden_windows[pid] = {
-                            'handle': hwnd,
-                            'title': title,
-                            'position': (rect.left, rect.top),
-                            'size': (rect.right - rect.left, rect.bottom - rect.top),
-                            'process_id': pid
-                        }
+                        width = rect.right - rect.left
+                        height = rect.bottom - rect.top
+                        # 已有记录时，只有尺寸正常（宽度大于 500）才覆盖，
+                        # 避免窗口已被移到屏幕外/最小化后读到异常尺寸而冲掉原记录
+                        if width > 500 or self.hidden_windows.get(pid) is None:
+                            self.hidden_windows[pid] = {
+                                'handle': hwnd,
+                                'title': title,
+                                'position': (rect.left, rect.top),
+                                'size': (width, height),
+                                'process_id': pid
+                            }
                         self.mute_process_audio(pid)
                         self.enhanced_hide_window(hwnd)
                         ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_MINIMIZE)
