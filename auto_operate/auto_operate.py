@@ -683,8 +683,7 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
                 self.table.setItem(row, col, item)
             window_info = self.get_game_windows(pid)
             if window_info and 'size' in window_info:
-                width, height = window_info['size']
-                if width > 500 or self.hidden_windows.get(pid) is None:
+                if self.hidden_windows.get(pid) is None:
                     self.hidden_windows[pid] = window_info
 
     def _on_rows_moved(self):
@@ -876,7 +875,7 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
                         height = rect.bottom - rect.top
                         # 已有记录时，只有尺寸正常（宽度大于 500）才覆盖，
                         # 避免窗口已被移到屏幕外/最小化后读到异常尺寸而冲掉原记录
-                        if width > 500 or self.hidden_windows.get(pid) is None:
+                        if self.hidden_windows.get(pid) is None:
                             self.hidden_windows[pid] = {
                                 'handle': hwnd,
                                 'title': title,
@@ -925,9 +924,11 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
                             x, y, width, height = 226, 100, 3388, 1958
                         if width < 500 or height < 100:
                             width, height = 3388, 1958
-                            x, y = 226, 100
+                            x, y = 235, 109
                         if x < 0 or y < 0:
-                            x, y = 226, 100
+                            x, y = 235, 109
+                        if x > 1000 or y > 1000:
+                            x, y = 235, 109
                         win32gui.SetWindowPos(hwnd, win32con.HWND_BOTTOM, x, y, width, height, win32con.SWP_SHOWWINDOW)
                         ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
                         ctypes.windll.user32.SetForegroundWindow(hwnd)
