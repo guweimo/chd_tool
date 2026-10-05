@@ -34,6 +34,26 @@ SW_RESTORE = 9
 # Windows API类型定义
 LRESULT = ctypes.c_long
 
+# 游戏主客户端的窗口标题
+GAME_WINDOW_TITLE = "LaTale Client"
+
+
+def is_other_client_window_title(title):
+    """
+    判断是否为「带附加信息」的其它客户端窗口，例如：
+       LaTale Client(64)
+
+    这种标题在主标题之外还带了角色名 / 频道等信息，说明它属于另一个客户端实例。
+    只要某个进程拥有这类窗口，就把整个进程从进程实例列表里过滤掉。
+    """
+    title = (title or "").strip()
+    if not title:
+        return False
+    lowered = title.lower()
+    if GAME_WINDOW_TITLE.lower() not in lowered:
+        return False
+    return lowered != GAME_WINDOW_TITLE.lower()
+
 
 class DraggableTableWidget(QTableWidget):
     """支持整行拖拽排序的表格
@@ -667,6 +687,12 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
 
         for pid in ordered_pids:
             proc_info = self.running_processes[pid]
+            # 拥有「角色名 - 频道 - LaTale Client(64)」这类窗口的进程属于其它客户端实例，
+            # 整个进程从进程实例列表里过滤掉（不显示、也不参与隐藏/显示）
+            other_title = self.get_other_client_window_title(pid)
+            if other_title:
+                print(f"过滤进程 {pid}（{proc_info['name']}）：窗口标题 {other_title!r} 属于其它客户端实例")
+                continue
             row = self.table.rowCount()
             self.table.insertRow(row)
             values = [
@@ -746,6 +772,16 @@ class RainbowIslandManager(QMainWindow, AutoClickerMixin):
             if "LaTale Client" in w['title']:
                 window_info = w
         return window_info
+
+    def get_other_client_window_title(self, pid):
+        """
+        返回该进程下「带附加信息」的客户端窗口标题（如「倾零丶一叶 - 9频道  - LaTale Client(64)」），
+        没有则返回 None。用于把其它客户端实例从进程列表里过滤掉。
+        """
+        for window_info in self.get_process_windows(pid):
+            if is_other_client_window_title(window_info.get('title')):
+                return window_info['title']
+        return None
 
     def check_window_visibility(self, pid):
         try:
